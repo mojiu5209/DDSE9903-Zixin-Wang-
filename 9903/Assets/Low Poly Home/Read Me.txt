@@ -1,0 +1,17 @@
+Hello and thank you for purchasing Low Poly Home package.
+
+There are 197 prefabs. 
+All models use one atlas texture.
+For most of the example scenes the lighting is set to baked indirect and realtime directional.
+
+Texture is 512*512 png
+
+
+Update 1.5
+- Pack updated to Universal Render Pipeline.
+- Fixed all the see trough issues. And made asset more clear to use.
+- Realtime directional light for example scenes.
+- Added example scene with post-processing setup.
+
+Contact email:
+a3deve@gmail.com
