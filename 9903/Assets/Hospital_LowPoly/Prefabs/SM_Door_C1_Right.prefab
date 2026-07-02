@@ -11,7 +11,6 @@ GameObject:
   - component: {fileID: 4941442868552134}
   - component: {fileID: 33497863686168658}
   - component: {fileID: 23195004199219794}
-  - component: {fileID: 95221712068114998}
   m_Layer: 0
   m_Name: SM_Door_C1_Right
   m_TagString: Untagged
@@ -91,25 +90,3 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!95 &95221712068114998
-Animator:
-  serializedVersion: 7
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1260087165676050}
-  m_Enabled: 1
-  m_Avatar: {fileID: 9000000, guid: 02ec20e99df05c04b9000931af4c0d21, type: 3}
-  m_Controller: {fileID: 0}
-  m_CullingMode: 0
-  m_UpdateMode: 0
-  m_ApplyRootMotion: 0
-  m_LinearVelocityBlending: 0
-  m_StabilizeFeet: 0
-  m_AnimatePhysics: 0
-  m_WarningMessage: 
-  m_HasTransformHierarchy: 1
-  m_AllowConstantClipSamplingOptimization: 1
-  m_KeepAnimatorStateOnDisable: 0
-  m_WriteDefaultValuesOnDisable: 0
