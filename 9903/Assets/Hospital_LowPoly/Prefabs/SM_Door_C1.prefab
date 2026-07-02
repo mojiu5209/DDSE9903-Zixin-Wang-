@@ -12,7 +12,6 @@ GameObject:
   - component: {fileID: 33062595913277510}
   - component: {fileID: 23184042416185110}
   - component: {fileID: 65254383739700600}
-  - component: {fileID: 1959475376027402581}
   m_Layer: 0
   m_Name: SM_Door_C1
   m_TagString: Untagged
@@ -113,25 +112,3 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.14379638, y: 1.985242, z: 1.115519}
   m_Center: {x: -0.036953807, y: 1.0117226, z: 0.53864217}
---- !u!95 &1959475376027402581
-Animator:
-  serializedVersion: 7
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1278539985076300}
-  m_Enabled: 1
-  m_Avatar: {fileID: 0}
-  m_Controller: {fileID: 9100000, guid: a591559fbbb00604fb0ead195e7bb72a, type: 2}
-  m_CullingMode: 0
-  m_UpdateMode: 0
-  m_ApplyRootMotion: 0
-  m_LinearVelocityBlending: 0
-  m_StabilizeFeet: 0
-  m_AnimatePhysics: 0
-  m_WarningMessage: 
-  m_HasTransformHierarchy: 1
-  m_AllowConstantClipSamplingOptimization: 1
-  m_KeepAnimatorStateOnDisable: 0
-  m_WriteDefaultValuesOnDisable: 0
