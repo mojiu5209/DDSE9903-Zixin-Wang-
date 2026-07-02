@@ -1,41 +1,44 @@
 using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
+using TMPro;
 
 public class HospitalIntro : MonoBehaviour
 {
     [Header("Cameras")]
     [SerializeField] private Camera introCamera;
-    [SerializeField] private Camera playerCamera;
     [SerializeField] private GameObject playerObject;
 
     [Header("Camera Positions")]
     [SerializeField] private Transform wakeLying;
     [SerializeField] private Transform wakeSitting;
-    [SerializeField] private Transform wakeStanding;
+
+    [Header("Next Day Player")]
+    [SerializeField] private Transform nextDaySpawn;
+    [SerializeField] private float nextDayTitleTime = 1.5f;
+    [SerializeField] private float nextDayFadeInTime = 2f;
 
     [Header("UI")]
     [SerializeField] private Image blackFade;
     [SerializeField] private Image whiteHaze;
-
-    [Header("Hospital Audio")]
-    [SerializeField] private AudioSource hospitalAmbience;
-    [SerializeField] private AudioSource heartMonitor;
-    [SerializeField] private AudioSource tinnitus;
+    [SerializeField] private TextMeshProUGUI subtitleText;
 
     [Header("Timing")]
     [SerializeField] private float openingBlackScreenTime = 0.8f;
     [SerializeField] private float sitUpTime = 2f;
-    [SerializeField] private float standUpTime = 1.5f;
 
-    [Header("Tinnitus Settings")]
-    [SerializeField] private float tinnitusBaseVolume = 0.08f;
-    [SerializeField] private float tinnitusVariation = 0.035f;
-    [SerializeField] private float tinnitusWaveSpeed = 1.5f;
-    [SerializeField] private float tinnitusPulseFadeSpeed = 0.28f;
+    // 对话直接写在这里，不会显示在 Inspector
+    private const string DoctorFirstLine =
+        "Can you hear me? Try not to move too quickly.";
 
-    private float tinnitusPulse;
-    private Coroutine tinnitusRoutine;
+    private const string PlayerReply =
+        "Who... who am I? Why am I here?";
+
+    private const string DoctorFinalLine =
+        "You were involved in a car accident. You have a mild concussion. It may be causing temporary memory loss, but physically, you are recovering well.";
+
+    private const string InnerMonologue =
+        "A car accident... Why does it feel like I have forgotten something important?";
 
     private void Start()
     {
@@ -44,153 +47,148 @@ public class HospitalIntro : MonoBehaviour
 
     private IEnumerator PlayIntro()
     {
-        // 先关闭真实玩家，避免玩家相机抢画面
+        // 先关闭 EZPZ 玩家，使用 IntroCamera 完成开场
         if (playerObject != null)
         {
             playerObject.SetActive(false);
         }
 
-        // 开启开场相机，并放到躺下位置
         if (introCamera != null && wakeLying != null)
         {
             introCamera.gameObject.SetActive(true);
+
             introCamera.transform.SetPositionAndRotation(
                 wakeLying.position,
                 wakeLying.rotation
             );
         }
 
-        // 初始状态：全黑，画面很模糊
+        // 开场：全黑、非常模糊
         SetImageAlpha(blackFade, 1f);
         SetImageAlpha(whiteHaze, 0.85f);
-
-        // 播放医院声音
-        if (hospitalAmbience != null)
-        {
-            hospitalAmbience.Play();
-        }
-
-        if (heartMonitor != null)
-        {
-            heartMonitor.Play();
-        }
-
-        StartTinnitus();
+        SetSubtitle("");
 
         yield return new WaitForSeconds(openingBlackScreenTime);
 
-        // 第一次睁眼：很短、很模糊
-        PulseTinnitus(0.18f);
-        yield return StartCoroutine(BlinkOpen(
-            targetBlackAlpha: 0.35f,
-            targetHazeAlpha: 0.75f,
-            duration: 0.18f
-        ));
-
+        // 第一次睁眼
+        yield return StartCoroutine(BlinkOpen(0.35f, 0.75f, 0.18f));
         yield return new WaitForSeconds(0.18f);
-
         yield return StartCoroutine(BlinkClose(0.12f));
 
-        // 第二次睁眼：稍微清楚一点
+        // 第二次睁眼
         yield return new WaitForSeconds(0.08f);
-
-        PulseTinnitus(0.13f);
-        yield return StartCoroutine(BlinkOpen(
-            targetBlackAlpha: 0.18f,
-            targetHazeAlpha: 0.55f,
-            duration: 0.28f
-        ));
-
+        yield return StartCoroutine(BlinkOpen(0.18f, 0.55f, 0.28f));
         yield return new WaitForSeconds(0.25f);
-
         yield return StartCoroutine(BlinkClose(0.10f));
 
-        // 第三次睁眼：开始能看见医院轮廓
+        // 第三次睁眼
         yield return new WaitForSeconds(0.10f);
-
-        PulseTinnitus(0.08f);
-        yield return StartCoroutine(BlinkOpen(
-            targetBlackAlpha: 0.05f,
-            targetHazeAlpha: 0.35f,
-            duration: 0.40f
-        ));
-
+        yield return StartCoroutine(BlinkOpen(0.05f, 0.35f, 0.40f));
         yield return new WaitForSeconds(0.40f);
-
         yield return StartCoroutine(BlinkClose(0.08f));
 
-        // 第四次睁眼：基本恢复
+        // 第四次睁眼：基本看清
         yield return new WaitForSeconds(0.12f);
+        yield return StartCoroutine(BlinkOpen(0f, 0.12f, 0.80f));
 
-        PulseTinnitus(0.04f);
-        yield return StartCoroutine(BlinkOpen(
-            targetBlackAlpha: 0f,
-            targetHazeAlpha: 0.12f,
-            duration: 0.80f
-        ));
-
-        // 最后一点模糊感慢慢消失
+        // 剩余模糊慢慢消失
         yield return StartCoroutine(FadeImage(
             whiteHaze,
             0.12f,
             0f,
-            1.6f
+            1.5f
         ));
 
-        // 从躺着慢慢坐起
-        if (wakeLying != null && wakeSitting != null)
+        // 镜头从躺着变成坐起
+        if (introCamera != null && wakeLying != null && wakeSitting != null)
         {
             yield return StartCoroutine(MoveCamera(
                 wakeLying,
                 wakeSitting,
-                sitUpTime,
-                true
+                sitUpTime
             ));
         }
 
-        // 再慢慢站起来
-        if (wakeSitting != null && wakeStanding != null)
+        // 医生已站在病床旁，直接开始对话
+        yield return StartCoroutine(ShowDialogue(
+            "Doctor",
+            DoctorFirstLine,
+            3f
+        ));
+
+        yield return StartCoroutine(ShowDialogue(
+            "You",
+            PlayerReply,
+            2.5f
+        ));
+
+        yield return StartCoroutine(ShowDialogue(
+            "Doctor",
+            DoctorFinalLine,
+            5f
+        ));
+
+        yield return StartCoroutine(ShowThought(
+            InnerMonologue,
+            4f
+        ));
+
+        // 主角昏沉睡去
+        SetSubtitle("<i>My eyelids feel heavy...</i>");
+        yield return new WaitForSeconds(1f);
+
+        yield return StartCoroutine(FadeImage(
+            blackFade,
+            0f,
+            1f,
+            2.5f
+        ));
+
+        // 黑幕中显示第二天
+        SetSubtitle("The next morning...");
+        yield return new WaitForSeconds(nextDayTitleTime);
+
+        // 把 EZPZ 玩家放到第二天的出生位置
+        if (playerObject != null && nextDaySpawn != null)
         {
-            yield return StartCoroutine(MoveCamera(
-                wakeSitting,
-                wakeStanding,
-                standUpTime,
-                false
-            ));
+            playerObject.transform.SetPositionAndRotation(
+                nextDaySpawn.position,
+                nextDaySpawn.rotation
+            );
         }
 
-        // 耳鸣渐弱后停止
-        yield return StartCoroutine(FadeOutTinnitus(1.2f));
+        // 关闭 IntroCamera，打开 EZPZ Player
+        if (introCamera != null)
+        {
+            introCamera.gameObject.SetActive(false);
+        }
 
-        // 切回玩家
         if (playerObject != null)
         {
             playerObject.SetActive(true);
         }
 
-        if (playerCamera != null && wakeStanding != null)
-        {
-            playerCamera.transform.SetPositionAndRotation(
-                wakeStanding.position,
-                wakeStanding.rotation
-            );
-        }
+        // 等待一帧，让 EZPZ Player 内部相机完成启动
+        yield return null;
 
-        if (introCamera != null)
-        {
-            introCamera.gameObject.SetActive(false);
-        }
+        // 黑幕淡出，第二天开始自由移动
+        yield return StartCoroutine(FadeImage(
+            blackFade,
+            1f,
+            0f,
+            nextDayFadeInTime
+        ));
+
+        SetSubtitle("");
     }
 
-    // 睁眼：黑幕减少，白雾减少
     private IEnumerator BlinkOpen(
         float targetBlackAlpha,
         float targetHazeAlpha,
         float duration)
     {
-        float startBlack = blackFade.color.a;
-        float startHaze = whiteHaze.color.a;
-
+        float startBlack = GetImageAlpha(blackFade);
+        float startHaze = GetImageAlpha(whiteHaze);
         float timer = 0f;
 
         while (timer < duration)
@@ -215,11 +213,9 @@ public class HospitalIntro : MonoBehaviour
         SetImageAlpha(whiteHaze, targetHazeAlpha);
     }
 
-    // 闭眼：黑幕快速回到全黑
     private IEnumerator BlinkClose(float duration)
     {
-        float startBlack = blackFade.color.a;
-
+        float startBlack = GetImageAlpha(blackFade);
         float timer = 0f;
 
         while (timer < duration)
@@ -237,12 +233,10 @@ public class HospitalIntro : MonoBehaviour
         SetImageAlpha(blackFade, 1f);
     }
 
-    // 镜头躺下 → 坐起 / 坐起 → 站立
     private IEnumerator MoveCamera(
         Transform startPoint,
         Transform endPoint,
-        float duration,
-        bool addDizziness)
+        float duration)
     {
         float timer = 0f;
 
@@ -268,15 +262,12 @@ public class HospitalIntro : MonoBehaviour
                 t
             );
 
-            // 坐起时有非常轻微的头晕偏移
-            if (addDizziness)
-            {
-                position += new Vector3(
-                    Mathf.Sin(timer * 10f) * 0.012f,
-                    Mathf.Cos(timer * 8f) * 0.008f,
-                    0f
-                );
-            }
+            // 坐起时的很轻微头晕
+            position += new Vector3(
+                Mathf.Sin(timer * 9f) * 0.008f,
+                Mathf.Cos(timer * 7f) * 0.005f,
+                0f
+            );
 
             introCamera.transform.SetPositionAndRotation(
                 position,
@@ -290,6 +281,23 @@ public class HospitalIntro : MonoBehaviour
             endPoint.position,
             endPoint.rotation
         );
+    }
+
+    private IEnumerator ShowDialogue(
+        string speaker,
+        string line,
+        float duration)
+    {
+        SetSubtitle("<b>" + speaker + ":</b> " + line);
+        yield return new WaitForSeconds(duration);
+    }
+
+    private IEnumerator ShowThought(
+        string line,
+        float duration)
+    {
+        SetSubtitle("<i>" + line + "</i>");
+        yield return new WaitForSeconds(duration);
     }
 
     private IEnumerator FadeImage(
@@ -320,6 +328,19 @@ public class HospitalIntro : MonoBehaviour
         SetImageAlpha(image, endAlpha);
     }
 
+    private void SetSubtitle(string text)
+    {
+        if (subtitleText != null)
+        {
+            subtitleText.text = text;
+        }
+    }
+
+    private float GetImageAlpha(Image image)
+    {
+        return image != null ? image.color.a : 0f;
+    }
+
     private void SetImageAlpha(Image image, float alpha)
     {
         if (image == null)
@@ -330,101 +351,5 @@ public class HospitalIntro : MonoBehaviour
         Color colour = image.color;
         colour.a = Mathf.Clamp01(alpha);
         image.color = colour;
-    }
-
-    // ---------- Tinnitus ----------
-
-    private void StartTinnitus()
-    {
-        if (tinnitus == null || tinnitus.clip == null)
-        {
-            return;
-        }
-
-        tinnitus.loop = true;
-        tinnitus.volume = 0f;
-
-        if (!tinnitus.isPlaying)
-        {
-            tinnitus.Play();
-        }
-
-        if (tinnitusRoutine != null)
-        {
-            StopCoroutine(tinnitusRoutine);
-        }
-
-        tinnitusRoutine = StartCoroutine(TinnitusWave());
-    }
-
-    private IEnumerator TinnitusWave()
-    {
-        while (true)
-        {
-            // PerlinNoise 会产生比较自然、平滑的音量起伏
-            float noise = Mathf.PerlinNoise(
-                Time.time * tinnitusWaveSpeed,
-                0.5f
-            );
-
-            float wave = (noise - 0.5f) * 2f;
-
-            float targetVolume =
-                tinnitusBaseVolume +
-                wave * tinnitusVariation +
-                tinnitusPulse;
-
-            tinnitus.volume = Mathf.Lerp(
-                tinnitus.volume,
-                Mathf.Clamp01(targetVolume),
-                Time.deltaTime * 4f
-            );
-
-            // 每次睁眼后的突然耳鸣会慢慢退回基础音量
-            tinnitusPulse = Mathf.MoveTowards(
-                tinnitusPulse,
-                0f,
-                tinnitusPulseFadeSpeed * Time.deltaTime
-            );
-
-            yield return null;
-        }
-    }
-
-    private void PulseTinnitus(float strength)
-    {
-        tinnitusPulse = Mathf.Max(tinnitusPulse, strength);
-    }
-
-    private IEnumerator FadeOutTinnitus(float duration)
-    {
-        if (tinnitus == null)
-        {
-            yield break;
-        }
-
-        float startVolume = tinnitus.volume;
-        float timer = 0f;
-
-        while (timer < duration)
-        {
-            timer += Time.deltaTime;
-
-            tinnitus.volume = Mathf.Lerp(
-                startVolume,
-                0f,
-                timer / duration
-            );
-
-            yield return null;
-        }
-
-        tinnitus.Stop();
-
-        if (tinnitusRoutine != null)
-        {
-            StopCoroutine(tinnitusRoutine);
-            tinnitusRoutine = null;
-        }
     }
 }

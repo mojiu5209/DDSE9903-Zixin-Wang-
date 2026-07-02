@@ -1061,20 +1061,17 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HospitalIntro
   introCamera: {fileID: 665107269}
-  playerCamera: {fileID: 736602983}
   playerObject: {fileID: 388228828}
   wakeLying: {fileID: 2074164838}
   wakeSitting: {fileID: 1022909238}
-  wakeStanding: {fileID: 1166626304}
+  nextDaySpawn: {fileID: 292026003}
+  nextDayTitleTime: 1.5
+  nextDayFadeInTime: 2
   blackFade: {fileID: 1198887163}
   whiteHaze: {fileID: 406578356}
-  hospitalAmbience: {fileID: 0}
-  heartMonitor: {fileID: 0}
-  tinnitus: {fileID: 0}
-  blackScreenTime: 2
-  fadeTime: 6
+  subtitleText: {fileID: 0}
+  openingBlackScreenTime: 0.8
   sitUpTime: 5
-  standUpTime: 1.5
 --- !u!4 &50294527
 Transform:
   m_ObjectHideFlags: 0
@@ -5138,6 +5135,37 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 4174606362768794, guid: 751b2749455f85442b04c69254ddc7f6, type: 3}
   m_PrefabInstance: {fileID: 999766476}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &292026002
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 292026003}
+  m_Layer: 0
+  m_Name: NextDaySpawn
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &292026003
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 292026002}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -148.51, y: -12.43, z: -11.35}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 944645504}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &301697719
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -7075,8 +7103,8 @@ RectTransform:
   m_GameObject: {fileID: 406578355}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 6.1617, y: 6.1617, z: 6.1617}
-  m_ConstrainProportionsScale: 0
+  m_LocalScale: {x: 10.21, y: 10.21, z: 10.21}
+  m_ConstrainProportionsScale: 1
   m_Children: []
   m_Father: {fileID: 280531898}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -13687,11 +13715,6 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 89f7238d42a1e4944903f82e2200a073, type: 3}
---- !u!20 &736602983 stripped
-Camera:
-  m_CorrespondingSourceObject: {fileID: 886374719924831829, guid: df63664dbdd376b4298726771ab129fa, type: 3}
-  m_PrefabInstance: {fileID: 1866806610}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &737927922
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -15599,6 +15622,124 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 96eebd36829597b4ab00fc58cc2cd65e, type: 3}
+--- !u!1 &815337771
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 815337773}
+  - component: {fileID: 815337772}
+  m_Layer: 0
+  m_Name: CityTimeManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &815337772
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 815337771}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b14293717b12d804ebe7d18ed672d7e3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CityTimeController
+  startTimeOnPlay: 1
+  startTotalHour: 18
+  gameHoursPerRealSecond: 0.5
+  stopAtTotalHour: -1
+  directionalLight: {fileID: 809323206}
+  skyKeys:
+  - startHourOfDay: 0
+    skyboxMaterial: {fileID: 0}
+    skyExposure: 0
+    skyTint: {r: 0, g: 0, b: 0, a: 0}
+    skyRotation: 0
+    lightColor: {r: 0, g: 0, b: 0, a: 0}
+    lightIntensity: 0
+    lightEulerAngles: {x: 0, y: 0, z: 0}
+    ambientSky: {r: 0, g: 0, b: 0, a: 0}
+    ambientEquator: {r: 0, g: 0, b: 0, a: 0}
+    ambientGround: {r: 0, g: 0, b: 0, a: 0}
+  - startHourOfDay: 8
+    skyboxMaterial: {fileID: 0}
+    skyExposure: 0
+    skyTint: {r: 0, g: 0, b: 0, a: 0}
+    skyRotation: 0
+    lightColor: {r: 0, g: 0, b: 0, a: 0}
+    lightIntensity: 0
+    lightEulerAngles: {x: 0, y: 0, z: 0}
+    ambientSky: {r: 0, g: 0, b: 0, a: 0}
+    ambientEquator: {r: 0, g: 0, b: 0, a: 0}
+    ambientGround: {r: 0, g: 0, b: 0, a: 0}
+  - startHourOfDay: 0
+    skyboxMaterial: {fileID: 0}
+    skyExposure: 0
+    skyTint: {r: 0, g: 0, b: 0, a: 0}
+    skyRotation: 0
+    lightColor: {r: 0, g: 0, b: 0, a: 0}
+    lightIntensity: 0
+    lightEulerAngles: {x: 0, y: 0, z: 0}
+    ambientSky: {r: 0, g: 0, b: 0, a: 0}
+    ambientEquator: {r: 0, g: 0, b: 0, a: 0}
+    ambientGround: {r: 0, g: 0, b: 0, a: 0}
+  - startHourOfDay: 13
+    skyboxMaterial: {fileID: 0}
+    skyExposure: 0
+    skyTint: {r: 0, g: 0, b: 0, a: 0}
+    skyRotation: 0
+    lightColor: {r: 0, g: 0, b: 0, a: 0}
+    lightIntensity: 0
+    lightEulerAngles: {x: 0, y: 0, z: 0}
+    ambientSky: {r: 0, g: 0, b: 0, a: 0}
+    ambientEquator: {r: 0, g: 0, b: 0, a: 0}
+    ambientGround: {r: 0, g: 0, b: 0, a: 0}
+  - startHourOfDay: 18
+    skyboxMaterial: {fileID: 0}
+    skyExposure: 0
+    skyTint: {r: 0, g: 0, b: 0, a: 0}
+    skyRotation: 0
+    lightColor: {r: 0, g: 0, b: 0, a: 0}
+    lightIntensity: 0
+    lightEulerAngles: {x: 0, y: 0, z: 0}
+    ambientSky: {r: 0, g: 0, b: 0, a: 0}
+    ambientEquator: {r: 0, g: 0, b: 0, a: 0}
+    ambientGround: {r: 0, g: 0, b: 0, a: 0}
+  - startHourOfDay: 20
+    skyboxMaterial: {fileID: 0}
+    skyExposure: 0
+    skyTint: {r: 0, g: 0, b: 0, a: 0}
+    skyRotation: 0
+    lightColor: {r: 0, g: 0, b: 0, a: 0}
+    lightIntensity: 0
+    lightEulerAngles: {x: 0, y: 0, z: 0}
+    ambientSky: {r: 0, g: 0, b: 0, a: 0}
+    ambientEquator: {r: 0, g: 0, b: 0, a: 0}
+    ambientGround: {r: 0, g: 0, b: 0, a: 0}
+  updateEnvironmentOnSkyChange: 1
+  timedEvents: []
+--- !u!4 &815337773
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 815337771}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 33.17736, y: -116.02551, z: -117.55444}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &821420204
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -18359,9 +18500,9 @@ Transform:
   - {fileID: 280531898}
   - {fileID: 2074164838}
   - {fileID: 1022909238}
-  - {fileID: 1166626304}
   - {fileID: 50294527}
   - {fileID: 665107270}
+  - {fileID: 292026003}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &945279655
@@ -19686,13 +19827,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1022909237}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.17364825, y: -0, z: -0, w: 0.9848078}
-  m_LocalPosition: {x: -149.94217, y: -10.683159, z: -10.07917}
+  m_LocalRotation: {x: 0, y: 0.81915206, z: 0, w: 0.57357645}
+  m_LocalPosition: {x: -148.779, y: -10.599, z: -9.949}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 944645504}
-  m_LocalEulerAnglesHint: {x: -20, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 110, z: 0}
 --- !u!1001 &1024348740
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -23305,37 +23446,6 @@ Transform:
   - {fileID: 2143926668}
   - {fileID: 1541132446}
   m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &1166626303
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1166626304}
-  m_Layer: 0
-  m_Name: Wake-Standing
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &1166626304
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1166626303}
-  serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -148.16116, y: -10.393158, z: -11.27417}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 944645504}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &1166705219
 PrefabInstance:
@@ -42051,13 +42161,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2074164837}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.6427876, y: -0, z: -0, w: 0.7660445}
+  m_LocalRotation: {x: -0.6830127, y: 0.18301274, z: 0.18301274, w: 0.6830127}
   m_LocalPosition: {x: -149.94217, y: -11.15416, z: -10.07917}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 944645504}
-  m_LocalEulerAnglesHint: {x: -80, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: -90, y: 30, z: 0}
 --- !u!4 &2076522800 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 4382111091289942, guid: d818f0a1a30853b419eaa38652279a06, type: 3}
@@ -43456,3 +43566,4 @@ SceneRoots:
   - {fileID: 516441594}
   - {fileID: 876450894}
   - {fileID: 944645504}
+  - {fileID: 815337773}
