@@ -1,0 +1,85 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d9a6db46ea1f40743af6eb0ed0193136, type: 3}
+  m_Name: Skybox Definition
+  m_EditorClassIdentifier: 
+  periodsOfDay:
+  - description: Night End
+    startTime: 4.24
+    horizonColor: {r: 0.018500218, g: 0.015208514, b: 0.018500218, a: 0}
+    zenithColor: {r: 0.052860655, g: 0.006512091, b: 0.057805434, a: 0}
+    groundColor: {r: 0.10461649, g: 0.088655606, b: 0.10224175, a: 0}
+  - description: Dawn
+    startTime: 6.82
+    horizonColor: {r: 0.4528302, g: 0.24195907, b: 0.087575644, a: 0}
+    zenithColor: {r: 0.103181764, g: 0.09021698, b: 0.262, a: 0}
+    groundColor: {r: 0.07008724, g: 0.07290534, b: 0.084905684, a: 0}
+  - description: Day
+    startTime: 9.1
+    horizonColor: {r: 0.21987364, g: 0.3858194, b: 0.5754717, a: 0}
+    zenithColor: {r: 0.12936097, g: 0.20178443, b: 0.4811321, a: 0}
+    groundColor: {r: 0.05660379, g: 0.045561332, b: 0.04026345, a: 0}
+  - description: Day End
+    startTime: 16.5
+    horizonColor: {r: 0.21952623, g: 0.38642952, b: 0.57758063, a: 0}
+    zenithColor: {r: 0.13013652, g: 0.2015563, b: 0.47932023, a: 0}
+    groundColor: {r: 0.056128494, g: 0.045186214, b: 0.04091521, a: 0}
+  - description: Evening
+    startTime: 17
+    horizonColor: {r: 0.24528301, g: 0.12613179, b: 0.052064795, a: 0}
+    zenithColor: {r: 0.26415092, g: 0.051085785, b: 0.14640445, a: 0}
+    groundColor: {r: 0.066037714, g: 0.040888004, b: 0.02953007, a: 0}
+  - description: Night
+    startTime: 20.54
+    horizonColor: {r: 0.01886791, g: 0.014849045, b: 0.01886791, a: 0}
+    zenithColor: {r: 0.05364706, g: 0.0067058816, b: 0.056999996, a: 0}
+    groundColor: {r: 0.103773594, g: 0.08859915, b: 0.102415465, a: 0}
+  timeOfDay: 7.34
+  activeTimeOfDay: 7.34
+  realSecondsToGameHours: 0
+  hoursForTransition: 1
+  sunBaseRotationY: 279
+  sunLightIntensity: 1.2
+  sunMaxAngleBelowHorizon: 20
+  cloudiness: 0
+  cloudSpeed: 1
+  sunSize: 0.4
+  sunColorAutomatic: 1
+  sunColor: {r: 4, g: 4, b: 4, a: 1}
+  sunInfluenceSize: 2.55
+  sunInfluenceIntensity: 0.198
+  cloudSharpness: 0.6
+  cloudColor: {r: 2, g: 2, b: 2, a: 1}
+  cloudShadingColor: {r: 0.19544323, g: 0.21189703, b: 0.2264151, a: 1}
+  cloudShadingThreshold: 0.02
+  cloudShadingSharpness: 0.02
+  cloudShadingStrength: 0.25
+  sunCloudInfluence: 1
+  skyColorCloudInfluence: 0.5
+  cloudOpacity: 1
+  cloudNightLuminanceMultiplier: 0.15
+  alternateUVAtZenith: 1
+  cloudTexture1: {fileID: 2800000, guid: 5523415a55da14d4f8906fe5c1ef62a4, type: 3}
+  cloudTexture2: {fileID: 2800000, guid: a978542df6c872249bd1be5355a8eec7, type: 3}
+  ditherStrength: 0.3
+  texture1ZenithTiling: {x: 1, y: 1}
+  texture2ZenithTiling: {x: 0.5, y: 0.5}
+  texture1HorizonTiling: {x: 1, y: 2}
+  texture2HorizonTiling: {x: 2, y: 3}
+  texture1HorizonTilingSterile: {x: 1, y: 2}
+  texture2HorizonTilingSterile: {x: 2, y: 3}
+  fogHeightPower: 15
+  fogColorBlend: 0.6
+  baseFogColor: {r: 0.7169812, g: 0.6008938, b: 0.5512638, a: 1}
+  fogStart: 0
+  fogEnd: 10000
+  fogDithering: 0.03

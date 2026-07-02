@@ -1,0 +1,12 @@
+fileFormatVersion: 2
+guid: 7b1510bf0242c9c4092b2189d6484aa3
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences:
+  - moonDefinition: {fileID: 11400000, guid: 30a41772317438f43a71eee03596b8f1, type: 2}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

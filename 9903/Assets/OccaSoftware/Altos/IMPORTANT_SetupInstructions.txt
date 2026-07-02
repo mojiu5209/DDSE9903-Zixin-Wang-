@@ -1,0 +1,6 @@
+IMPORTANT SETUP INSTRUCTIONS
+1. Visual Effect Graph MUST be imported to your project before completing setup.
+2. If Visual Effect Graph is not in your project, you MUST take the following steps immediately before proceeding:
+  2a. Delete the OccaSoftware/Altos file path from your project. Do not save the scene.
+  2b. Import the Visual Effect Graph from the Package Manager.
+  2c. Re-import Altos and proceed normally.
