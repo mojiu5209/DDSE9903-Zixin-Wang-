@@ -1,6 +1,7 @@
 using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.InputSystem;
 
 public class ClickablePhotoAlbum : MonoBehaviour
 {
@@ -18,29 +19,32 @@ public class ClickablePhotoAlbum : MonoBehaviour
     [Header("Physical Album Animation")]
     [SerializeField] private Animator albumAnimator;
     [SerializeField] private string openTriggerName = "Open";
-
-    [Tooltip("第 5 张照片之后再次点击时触发。")]
     [SerializeField] private string finishTriggerName = "Finish";
 
     [SerializeField] private float openAnimationDelay = 0.3f;
 
-    [Tooltip("相册翻到背面并合上后，等待多久恢复控制。")]
+    [Tooltip("Finish 动画本身的长度。")]
     [SerializeField] private float finishAnimationDuration = 2.5f;
+
+    [Tooltip("相册合上后，停留多久才恢复玩家控制和描边。")]
+    [SerializeField] private float postCloseHoldTime = 1.5f;
 
     [Header("Album UI")]
     [SerializeField] private GameObject albumPanel;
     [SerializeField] private Image pageImage;
+
+    [Tooltip("必须按顺序拖入 5 张照片。")]
     [SerializeField] private Sprite[] photoPages;
+
     [SerializeField] private GameObject pageClickHint;
 
     [Header("Player Controls")]
-    [Tooltip("拖入 EZPZ 上控制移动和鼠标视角的脚本。")]
+    [Tooltip("拖入 EZPZ 上负责移动、鼠标视角的脚本组件。")]
     [SerializeField] private MonoBehaviour[] controlsToDisable;
 
     private bool albumIsOpen;
     private bool isOpening;
     private bool isClosing;
-
     private int currentPageIndex;
 
     private Vector3 highlightBaseScale;
@@ -67,7 +71,7 @@ public class ClickablePhotoAlbum : MonoBehaviour
         if (photoPages == null || photoPages.Length != 5)
         {
             Debug.LogWarning(
-                "Album should contain exactly 5 photo pages."
+                "ClickablePhotoAlbum: Please assign exactly 5 photos."
             );
         }
     }
@@ -79,12 +83,12 @@ public class ClickablePhotoAlbum : MonoBehaviour
             return;
         }
 
-        // 相册未打开：准星对准相册并左键点击
+        // 相册未打开：准星对准相册，点击打开。
         if (!albumIsOpen)
         {
             PulseHighlight();
 
-            if (Input.GetMouseButtonDown(0))
+            if (LeftClickThisFrame())
             {
                 TryOpenAlbum();
             }
@@ -92,11 +96,17 @@ public class ClickablePhotoAlbum : MonoBehaviour
             return;
         }
 
-        // 相册打开后：每次点击翻一页
-        if (Input.GetMouseButtonDown(0))
+        // 相册打开后：每次点击翻一页。
+        if (LeftClickThisFrame())
         {
             HandleAlbumClick();
         }
+    }
+
+    private bool LeftClickThisFrame()
+    {
+        return Mouse.current != null &&
+               Mouse.current.leftButton.wasPressedThisFrame;
     }
 
     private void TryOpenAlbum()
@@ -104,11 +114,12 @@ public class ClickablePhotoAlbum : MonoBehaviour
         if (playerCamera == null || albumClickCollider == null)
         {
             Debug.LogWarning(
-                "Please assign Player Camera and Album Click Collider."
+                "ClickablePhotoAlbum: Assign Player Camera and Album Click Collider."
             );
             return;
         }
 
+        // 第一人称状态下使用屏幕中央准星射线。
         Ray ray = playerCamera.ViewportPointToRay(
             new Vector3(0.5f, 0.5f, 0f)
         );
@@ -130,6 +141,7 @@ public class ClickablePhotoAlbum : MonoBehaviour
 
         bool clickedAlbum =
             hit.collider == albumClickCollider ||
+            hit.collider.transform == transform ||
             hit.collider.transform.IsChildOf(transform);
 
         if (clickedAlbum)
@@ -180,7 +192,7 @@ public class ClickablePhotoAlbum : MonoBehaviour
             return;
         }
 
-        // 前四张：点击进入下一张
+        // 第 1–4 页：点击进入下一页。
         if (currentPageIndex < photoPages.Length - 1)
         {
             currentPageIndex++;
@@ -188,7 +200,7 @@ public class ClickablePhotoAlbum : MonoBehaviour
             return;
         }
 
-        // 第五张已显示：再次点击才执行翻到背面并合上
+        // 第 5 页：再次点击才触发翻到背面并合上。
         StartCoroutine(FinishAlbumRoutine());
     }
 
@@ -202,12 +214,6 @@ public class ClickablePhotoAlbum : MonoBehaviour
         }
 
         pageImage.sprite = photoPages[currentPageIndex];
-
-        // 到最后一页时，提示文字改为关闭提示
-        if (pageClickHint != null)
-        {
-            pageClickHint.SetActive(true);
-        }
     }
 
     private IEnumerator FinishAlbumRoutine()
@@ -219,7 +225,7 @@ public class ClickablePhotoAlbum : MonoBehaviour
             pageClickHint.SetActive(false);
         }
 
-        // 先隐藏 UI，才能看到现实中的相册翻回背面、合上
+        // UI 消失后，玩家看见桌上的实体相册翻回、合上。
         if (albumPanel != null)
         {
             albumPanel.SetActive(false);
@@ -231,8 +237,10 @@ public class ClickablePhotoAlbum : MonoBehaviour
             albumAnimator.SetTrigger(finishTriggerName);
         }
 
-        // 等待 3D 相册翻页 + 合上的动画完成
         yield return new WaitForSeconds(finishAnimationDuration);
+
+        // 相册合上后短暂停留。
+        yield return new WaitForSeconds(postCloseHoldTime);
 
         currentPageIndex = 0;
         albumIsOpen = false;
@@ -253,9 +261,7 @@ public class ClickablePhotoAlbum : MonoBehaviour
             return;
         }
 
-        controlsWereEnabled = new bool[
-            controlsToDisable.Length
-        ];
+        controlsWereEnabled = new bool[controlsToDisable.Length];
 
         for (int i = 0; i < controlsToDisable.Length; i++)
         {
@@ -264,9 +270,7 @@ public class ClickablePhotoAlbum : MonoBehaviour
                 continue;
             }
 
-            controlsWereEnabled[i] =
-                controlsToDisable[i].enabled;
-
+            controlsWereEnabled[i] = controlsToDisable[i].enabled;
             controlsToDisable[i].enabled = false;
         }
     }
@@ -286,8 +290,7 @@ public class ClickablePhotoAlbum : MonoBehaviour
                 continue;
             }
 
-            controlsToDisable[i].enabled =
-                controlsWereEnabled[i];
+            controlsToDisable[i].enabled = controlsWereEnabled[i];
         }
     }
 
@@ -302,8 +305,7 @@ public class ClickablePhotoAlbum : MonoBehaviour
 
         if (visible)
         {
-            albumHighlight.transform.localScale =
-                highlightBaseScale;
+            albumHighlight.transform.localScale = highlightBaseScale;
         }
     }
 

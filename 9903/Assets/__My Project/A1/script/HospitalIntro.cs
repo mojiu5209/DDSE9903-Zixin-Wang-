@@ -1,15 +1,20 @@
 using System.Collections;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
-using TMPro;
 
 public class HospitalIntro : MonoBehaviour
 {
     [Header("Cameras")]
     [SerializeField] private Camera introCamera;
-    [SerializeField] private GameObject playerObject;
 
-    [Header("Camera Positions")]
+    [Tooltip("把 Hierarchy 最上面的 Main Camera 拖进来。不要拖 EZPZ Player 里面的 PlayerCamera。")]
+    [SerializeField] private Camera[] camerasToDisableForIntro;
+
+    [Tooltip("拖入 EZPZ Player Flat Screen WASD 根物体。")]
+    [SerializeField] private GameObject ezpzPlayer;
+
+    [Header("Intro Camera Positions")]
     [SerializeField] private Transform wakeLying;
     [SerializeField] private Transform wakeSitting;
 
@@ -27,7 +32,6 @@ public class HospitalIntro : MonoBehaviour
     [SerializeField] private float openingBlackScreenTime = 0.8f;
     [SerializeField] private float sitUpTime = 2f;
 
-    // 对话直接写在这里，不会显示在 Inspector
     private const string DoctorFirstLine =
         "Can you hear me? Try not to move too quickly.";
 
@@ -47,12 +51,16 @@ public class HospitalIntro : MonoBehaviour
 
     private IEnumerator PlayIntro()
     {
-        // 先关闭 EZPZ 玩家，使用 IntroCamera 完成开场
-        if (playerObject != null)
+        // 关闭会抢画面的普通 Main Camera。
+        DisableOtherCameras();
+
+        // 先关闭 EZPZ 玩家，避免 PlayerCamera 和 IntroCamera 同时显示。
+        if (ezpzPlayer != null)
         {
-            playerObject.SetActive(false);
+            ezpzPlayer.SetActive(false);
         }
 
+        // 开启电影镜头，初始朝向天花板。
         if (introCamera != null && wakeLying != null)
         {
             introCamera.gameObject.SetActive(true);
@@ -63,7 +71,6 @@ public class HospitalIntro : MonoBehaviour
             );
         }
 
-        // 开场：全黑、非常模糊
         SetImageAlpha(blackFade, 1f);
         SetImageAlpha(whiteHaze, 0.85f);
         SetSubtitle("");
@@ -87,11 +94,10 @@ public class HospitalIntro : MonoBehaviour
         yield return new WaitForSeconds(0.40f);
         yield return StartCoroutine(BlinkClose(0.08f));
 
-        // 第四次睁眼：基本看清
+        // 第四次睁眼
         yield return new WaitForSeconds(0.12f);
         yield return StartCoroutine(BlinkOpen(0f, 0.12f, 0.80f));
 
-        // 剩余模糊慢慢消失
         yield return StartCoroutine(FadeImage(
             whiteHaze,
             0.12f,
@@ -99,8 +105,10 @@ public class HospitalIntro : MonoBehaviour
             1.5f
         ));
 
-        // 镜头从躺着变成坐起
-        if (introCamera != null && wakeLying != null && wakeSitting != null)
+        // 真正的“躺着看天花板 → 慢慢坐起”镜头。
+        if (introCamera != null &&
+            wakeLying != null &&
+            wakeSitting != null)
         {
             yield return StartCoroutine(MoveCamera(
                 wakeLying,
@@ -109,7 +117,6 @@ public class HospitalIntro : MonoBehaviour
             ));
         }
 
-        // 医生已站在病床旁，直接开始对话
         yield return StartCoroutine(ShowDialogue(
             "Doctor",
             DoctorFirstLine,
@@ -133,7 +140,6 @@ public class HospitalIntro : MonoBehaviour
             4f
         ));
 
-        // 主角昏沉睡去
         SetSubtitle("<i>My eyelids feel heavy...</i>");
         yield return new WaitForSeconds(1f);
 
@@ -144,34 +150,30 @@ public class HospitalIntro : MonoBehaviour
             2.5f
         ));
 
-        // 黑幕中显示第二天
         SetSubtitle("The next morning...");
         yield return new WaitForSeconds(nextDayTitleTime);
 
-        // 把 EZPZ 玩家放到第二天的出生位置
-        if (playerObject != null && nextDaySpawn != null)
+        // 下一天切到 EZPZ 玩家视角。
+        if (ezpzPlayer != null && nextDaySpawn != null)
         {
-            playerObject.transform.SetPositionAndRotation(
+            ezpzPlayer.transform.SetPositionAndRotation(
                 nextDaySpawn.position,
                 nextDaySpawn.rotation
             );
         }
 
-        // 关闭 IntroCamera，打开 EZPZ Player
         if (introCamera != null)
         {
             introCamera.gameObject.SetActive(false);
         }
 
-        if (playerObject != null)
+        if (ezpzPlayer != null)
         {
-            playerObject.SetActive(true);
+            ezpzPlayer.SetActive(true);
         }
 
-        // 等待一帧，让 EZPZ Player 内部相机完成启动
         yield return null;
 
-        // 黑幕淡出，第二天开始自由移动
         yield return StartCoroutine(FadeImage(
             blackFade,
             1f,
@@ -182,6 +184,27 @@ public class HospitalIntro : MonoBehaviour
         SetSubtitle("");
     }
 
+    private void DisableOtherCameras()
+    {
+        if (camerasToDisableForIntro == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < camerasToDisableForIntro.Length; i++)
+        {
+            Camera targetCamera = camerasToDisableForIntro[i];
+
+            if (targetCamera == null ||
+                targetCamera == introCamera)
+            {
+                continue;
+            }
+
+            targetCamera.gameObject.SetActive(false);
+        }
+    }
+
     private IEnumerator BlinkOpen(
         float targetBlackAlpha,
         float targetHazeAlpha,
@@ -189,6 +212,7 @@ public class HospitalIntro : MonoBehaviour
     {
         float startBlack = GetImageAlpha(blackFade);
         float startHaze = GetImageAlpha(whiteHaze);
+
         float timer = 0f;
 
         while (timer < duration)
@@ -262,7 +286,7 @@ public class HospitalIntro : MonoBehaviour
                 t
             );
 
-            // 坐起时的很轻微头晕
+            // 坐起时极轻微的晕眩。
             position += new Vector3(
                 Mathf.Sin(timer * 9f) * 0.008f,
                 Mathf.Cos(timer * 7f) * 0.005f,
