@@ -6,34 +6,25 @@ using UnityEngine.UI;
 public class NightDogTransition : MonoBehaviour
 {
     [Header("Player")]
-    [Tooltip("拖入 EZPZ Player Flat Screen WASD 根物体。")]
     [SerializeField] private GameObject ezpzPlayer;
+    [SerializeField] private Transform morningPlayerSpawn;
 
     [Header("Dog Cinematic")]
-    [Tooltip("小狗过场专用相机，平时关闭。")]
     [SerializeField] private Camera dogViewCamera;
-
-    [Tooltip("拖入小狗根物体。")]
     [SerializeField] private Transform dogTransform;
 
-    [Tooltip("狗眼睛附近的位置偏移。")]
+    [Tooltip("拖入挂在 DOG 根物体上的 DogRouteWalker。")]
+    [SerializeField] private DogRouteWalker dogRouteWalker;
+
     [SerializeField]
     private Vector3 cameraLocalOffset =
         new Vector3(0f, 0.45f, 0.15f);
 
-    [Tooltip("相机相对狗头的旋转偏移。")]
     [SerializeField]
     private Vector3 cameraLocalRotation =
         new Vector3(5f, 0f, 0f);
 
     [SerializeField] private float cameraFollowSpeed = 12f;
-
-    [Header("Dog Animation")]
-    [Tooltip("可选。拖入狗的 Animator。")]
-    [SerializeField] private Animator dogAnimator;
-
-    [Tooltip("例如 DogNight1。没有动画 Trigger 可留空。")]
-    [SerializeField] private string dogAnimationTrigger = "DogNight1";
 
     [Header("UI")]
     [SerializeField] private Image blackFade;
@@ -43,6 +34,8 @@ public class NightDogTransition : MonoBehaviour
     [SerializeField] private float warningDuration = 2.5f;
     [SerializeField] private float fadeToBlackDuration = 1.5f;
     [SerializeField] private float fadeIntoDogViewDuration = 1.2f;
+    [SerializeField] private float morningFadeToBlackDuration = 1.5f;
+    [SerializeField] private float morningFadeIntoPlayerDuration = 1.5f;
 
     [Header("Text")]
     [TextArea(2, 3)]
@@ -50,8 +43,14 @@ public class NightDogTransition : MonoBehaviour
     private string sleepWarning =
         "It's too late. I should get some sleep.";
 
+    [TextArea(2, 3)]
+    [SerializeField]
+    private string morningText =
+        "The next morning...";
+
     private bool dogViewActive;
-    private bool hasStarted;
+    private bool hasStartedNight;
+    private bool hasReturnedToPlayer;
 
     private void Awake()
     {
@@ -72,10 +71,9 @@ public class NightDogTransition : MonoBehaviour
         }
     }
 
-    // 把这个方法放进 CityTimeController 的 Timed Event。
     public void StartNightDogView()
     {
-        if (hasStarted)
+        if (hasStartedNight)
         {
             return;
         }
@@ -83,9 +81,19 @@ public class NightDogTransition : MonoBehaviour
         StartCoroutine(NightDogRoutine());
     }
 
+    public void ReturnToPlayerView()
+    {
+        if (!hasStartedNight || hasReturnedToPlayer)
+        {
+            return;
+        }
+
+        StartCoroutine(ReturnToPlayerRoutine());
+    }
+
     private IEnumerator NightDogRoutine()
     {
-        hasStarted = true;
+        hasStartedNight = true;
 
         SetSubtitle("<i>" + sleepWarning + "</i>");
 
@@ -99,26 +107,28 @@ public class NightDogTransition : MonoBehaviour
             fadeToBlackDuration
         ));
 
-        // 黑屏后关掉玩家，确保不能移动。
         if (ezpzPlayer != null)
         {
             ezpzPlayer.SetActive(false);
         }
 
-        // 开启狗相机。
         if (dogViewCamera != null)
         {
             dogViewCamera.gameObject.SetActive(true);
         }
 
-        // 从狗头位置开始。
         SetDogCameraInstant();
 
-        // 触发狗狗移动动画。
-        if (dogAnimator != null &&
-            !string.IsNullOrEmpty(dogAnimationTrigger))
+        // 黑屏切到狗视角后，让狗开始走路线。
+        if (dogRouteWalker != null)
         {
-            dogAnimator.SetTrigger(dogAnimationTrigger);
+            dogRouteWalker.BeginRoute();
+        }
+        else
+        {
+            Debug.LogWarning(
+                "NightDogTransition: Dog Route Walker is not assigned."
+            );
         }
 
         dogViewActive = true;
@@ -130,6 +140,56 @@ public class NightDogTransition : MonoBehaviour
             0f,
             fadeIntoDogViewDuration
         ));
+    }
+
+    private IEnumerator ReturnToPlayerRoutine()
+    {
+        hasReturnedToPlayer = true;
+        dogViewActive = false;
+
+        SetSubtitle("<i>" + morningText + "</i>");
+
+        yield return new WaitForSeconds(1.5f);
+
+        yield return StartCoroutine(FadeBlack(
+            0f,
+            1f,
+            morningFadeToBlackDuration
+        ));
+
+        // 早上回玩家前停止狗路线。
+        if (dogRouteWalker != null)
+        {
+            dogRouteWalker.StopRoute();
+        }
+
+        if (dogViewCamera != null)
+        {
+            dogViewCamera.gameObject.SetActive(false);
+        }
+
+        if (ezpzPlayer != null && morningPlayerSpawn != null)
+        {
+            ezpzPlayer.transform.SetPositionAndRotation(
+                morningPlayerSpawn.position,
+                morningPlayerSpawn.rotation
+            );
+        }
+
+        if (ezpzPlayer != null)
+        {
+            ezpzPlayer.SetActive(true);
+        }
+
+        yield return null;
+
+        yield return StartCoroutine(FadeBlack(
+            1f,
+            0f,
+            morningFadeIntoPlayerDuration
+        ));
+
+        SetSubtitle("");
     }
 
     private void FollowDogCamera()
