@@ -8,17 +8,20 @@ public class HospitalIntro : MonoBehaviour
     [Header("Cameras")]
     [SerializeField] private Camera introCamera;
 
-    [Tooltip("把 Hierarchy 最上面的 Main Camera 拖进来。不要拖 EZPZ Player 里面的 PlayerCamera。")]
-    [SerializeField] private Camera[] camerasToDisableForIntro;
+    [Tooltip("拖入 Main Camera 和 PlayerFollowCamera。开场时会关闭它们。")]
+    [SerializeField] private Camera[] camerasToDisableAtIntro;
 
     [Tooltip("拖入 EZPZ Player Flat Screen WASD 根物体。")]
     [SerializeField] private GameObject ezpzPlayer;
+
+    [Tooltip("第二天切回玩家时要打开的相机，例如 PlayerFollowCamera。")]
+    [SerializeField] private Camera playerCameraToEnableAfterIntro;
 
     [Header("Intro Camera Positions")]
     [SerializeField] private Transform wakeLying;
     [SerializeField] private Transform wakeSitting;
 
-    [Header("Next Day Player")]
+    [Header("Next Day")]
     [SerializeField] private Transform nextDaySpawn;
     [SerializeField] private float nextDayTitleTime = 1.5f;
     [SerializeField] private float nextDayFadeInTime = 2f;
@@ -27,6 +30,9 @@ public class HospitalIntro : MonoBehaviour
     [SerializeField] private Image blackFade;
     [SerializeField] private Image whiteHaze;
     [SerializeField] private TextMeshProUGUI subtitleText;
+
+    [Tooltip("把 AlbumPanel 拖进来，开场时会强制隐藏。")]
+    [SerializeField] private GameObject[] uiPanelsToHideAtStart;
 
     [Header("Timing")]
     [SerializeField] private float openingBlackScreenTime = 0.8f;
@@ -44,68 +50,118 @@ public class HospitalIntro : MonoBehaviour
     private const string InnerMonologue =
         "A car accident... Why does it feel like I have forgotten something important?";
 
+    private void Awake()
+    {
+        PrepareIntroState();
+    }
+
     private void Start()
     {
         StartCoroutine(PlayIntro());
     }
 
-    private IEnumerator PlayIntro()
+    private void PrepareIntroState()
     {
-        // 关闭会抢画面的普通 Main Camera。
+        HideExtraUIPanels();
         DisableOtherCameras();
 
-        // 先关闭 EZPZ 玩家，避免 PlayerCamera 和 IntroCamera 同时显示。
         if (ezpzPlayer != null)
         {
             ezpzPlayer.SetActive(false);
         }
 
-        // 开启电影镜头，初始朝向天花板。
-        if (introCamera != null && wakeLying != null)
+        if (introCamera != null)
         {
             introCamera.gameObject.SetActive(true);
+        }
 
+        ResetFullScreenOverlay(whiteHaze);
+        ResetFullScreenOverlay(blackFade);
+
+        if (whiteHaze != null)
+        {
+            whiteHaze.raycastTarget = false;
+        }
+
+        if (blackFade != null)
+        {
+            blackFade.raycastTarget = false;
+        }
+
+        if (whiteHaze != null)
+        {
+            whiteHaze.gameObject.SetActive(true);
+        }
+
+        if (blackFade != null)
+        {
+            blackFade.gameObject.SetActive(true);
+        }
+
+        SetImageAlpha(blackFade, 1f);
+        SetImageAlpha(whiteHaze, 0f);
+        SetSubtitle("");
+    }
+
+    private IEnumerator PlayIntro()
+    {
+        if (introCamera != null && wakeLying != null)
+        {
             introCamera.transform.SetPositionAndRotation(
                 wakeLying.position,
                 wakeLying.rotation
             );
         }
 
-        SetImageAlpha(blackFade, 1f);
-        SetImageAlpha(whiteHaze, 0.85f);
-        SetSubtitle("");
-
         yield return new WaitForSeconds(openingBlackScreenTime);
 
-        // 第一次睁眼
-        yield return StartCoroutine(BlinkOpen(0.35f, 0.75f, 0.18f));
-        yield return new WaitForSeconds(0.18f);
-        yield return StartCoroutine(BlinkClose(0.12f));
-
-        // 第二次睁眼
-        yield return new WaitForSeconds(0.08f);
-        yield return StartCoroutine(BlinkOpen(0.18f, 0.55f, 0.28f));
-        yield return new WaitForSeconds(0.25f);
-        yield return StartCoroutine(BlinkClose(0.10f));
-
-        // 第三次睁眼
-        yield return new WaitForSeconds(0.10f);
-        yield return StartCoroutine(BlinkOpen(0.05f, 0.35f, 0.40f));
-        yield return new WaitForSeconds(0.40f);
-        yield return StartCoroutine(BlinkClose(0.08f));
-
-        // 第四次睁眼
-        yield return new WaitForSeconds(0.12f);
-        yield return StartCoroutine(BlinkOpen(0f, 0.12f, 0.80f));
-
-        yield return StartCoroutine(FadeImage(
-            whiteHaze,
-            0.12f,
-            0f,
-            1.5f
+        // 第一次睁眼：只出现一点点画面
+        yield return StartCoroutine(BlinkOpen(
+            0.65f,
+            0.32f,
+            0.18f
         ));
 
-        // 真正的“躺着看天花板 → 慢慢坐起”镜头。
+        yield return new WaitForSeconds(0.18f);
+
+        yield return StartCoroutine(BlinkClose(0.12f));
+
+        // 第二次睁眼：看见更多轮廓
+        yield return new WaitForSeconds(0.08f);
+
+        yield return StartCoroutine(BlinkOpen(
+            0.35f,
+            0.22f,
+            0.28f
+        ));
+
+        yield return new WaitForSeconds(0.25f);
+
+        yield return StartCoroutine(BlinkClose(0.10f));
+
+        // 第三次睁眼：基本能辨认病房
+        yield return new WaitForSeconds(0.10f);
+
+        yield return StartCoroutine(BlinkOpen(
+            0.12f,
+            0.10f,
+            0.40f
+        ));
+
+        yield return new WaitForSeconds(0.40f);
+
+        yield return StartCoroutine(BlinkClose(0.08f));
+
+        // 第四次睁眼：恢复清晰
+        yield return new WaitForSeconds(0.12f);
+
+        yield return StartCoroutine(BlinkOpen(
+            0f,
+            0f,
+            0.80f
+        ));
+
+        // 躺着看天花板 → 慢慢坐起
         if (introCamera != null &&
             wakeLying != null &&
             wakeSitting != null)
@@ -141,6 +197,7 @@ public class HospitalIntro : MonoBehaviour
         ));
 
         SetSubtitle("<i>My eyelids feel heavy...</i>");
+
         yield return new WaitForSeconds(1f);
 
         yield return StartCoroutine(FadeImage(
@@ -151,9 +208,9 @@ public class HospitalIntro : MonoBehaviour
         ));
 
         SetSubtitle("The next morning...");
+
         yield return new WaitForSeconds(nextDayTitleTime);
 
-        // 下一天切到 EZPZ 玩家视角。
         if (ezpzPlayer != null && nextDaySpawn != null)
         {
             ezpzPlayer.transform.SetPositionAndRotation(
@@ -174,6 +231,11 @@ public class HospitalIntro : MonoBehaviour
 
         yield return null;
 
+        if (playerCameraToEnableAfterIntro != null)
+        {
+            playerCameraToEnableAfterIntro.gameObject.SetActive(true);
+        }
+
         yield return StartCoroutine(FadeImage(
             blackFade,
             1f,
@@ -186,22 +248,38 @@ public class HospitalIntro : MonoBehaviour
 
     private void DisableOtherCameras()
     {
-        if (camerasToDisableForIntro == null)
+        if (camerasToDisableAtIntro == null)
         {
             return;
         }
 
-        for (int i = 0; i < camerasToDisableForIntro.Length; i++)
+        for (int i = 0; i < camerasToDisableAtIntro.Length; i++)
         {
-            Camera targetCamera = camerasToDisableForIntro[i];
+            Camera cameraToDisable = camerasToDisableAtIntro[i];
 
-            if (targetCamera == null ||
-                targetCamera == introCamera)
+            if (cameraToDisable == null ||
+                cameraToDisable == introCamera)
             {
                 continue;
             }
 
-            targetCamera.gameObject.SetActive(false);
+            cameraToDisable.gameObject.SetActive(false);
+        }
+    }
+
+    private void HideExtraUIPanels()
+    {
+        if (uiPanelsToHideAtStart == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < uiPanelsToHideAtStart.Length; i++)
+        {
+            if (uiPanelsToHideAtStart[i] != null)
+            {
+                uiPanelsToHideAtStart[i].SetActive(false);
+            }
         }
     }
 
@@ -218,6 +296,7 @@ public class HospitalIntro : MonoBehaviour
         while (timer < duration)
         {
             timer += Time.deltaTime;
+
             float t = timer / duration;
 
             SetImageAlpha(
@@ -240,6 +319,7 @@ public class HospitalIntro : MonoBehaviour
     private IEnumerator BlinkClose(float duration)
     {
         float startBlack = GetImageAlpha(blackFade);
+
         float timer = 0f;
 
         while (timer < duration)
@@ -286,7 +366,6 @@ public class HospitalIntro : MonoBehaviour
                 t
             );
 
-            // 坐起时极轻微的晕眩。
             position += new Vector3(
                 Mathf.Sin(timer * 9f) * 0.008f,
                 Mathf.Cos(timer * 7f) * 0.005f,
@@ -313,6 +392,7 @@ public class HospitalIntro : MonoBehaviour
         float duration)
     {
         SetSubtitle("<b>" + speaker + ":</b> " + line);
+
         yield return new WaitForSeconds(duration);
     }
 
@@ -321,6 +401,7 @@ public class HospitalIntro : MonoBehaviour
         float duration)
     {
         SetSubtitle("<i>" + line + "</i>");
+
         yield return new WaitForSeconds(duration);
     }
 
@@ -343,13 +424,36 @@ public class HospitalIntro : MonoBehaviour
 
             SetImageAlpha(
                 image,
-                Mathf.Lerp(startAlpha, endAlpha, timer / duration)
+                Mathf.Lerp(
+                    startAlpha,
+                    endAlpha,
+                    timer / duration
+                )
             );
 
             yield return null;
         }
 
         SetImageAlpha(image, endAlpha);
+    }
+
+    private void ResetFullScreenOverlay(Image image)
+    {
+        if (image == null)
+        {
+            return;
+        }
+
+        RectTransform rect = image.rectTransform;
+
+        rect.anchorMin = Vector2.zero;
+        rect.anchorMax = Vector2.one;
+
+        rect.offsetMin = Vector2.zero;
+        rect.offsetMax = Vector2.zero;
+
+        rect.localScale = Vector3.one;
+        rect.localRotation = Quaternion.identity;
     }
 
     private void SetSubtitle(string text)
