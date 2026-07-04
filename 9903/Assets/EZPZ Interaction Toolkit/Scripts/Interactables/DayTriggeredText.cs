@@ -4,6 +4,10 @@ using UnityEngine;
 
 public class DayTriggeredText : MonoBehaviour
 {
+    [Header("Time")]
+    [Tooltip("拖入 CityTimeManager 上的 CityTimeController。")]
+    [SerializeField] private CityTimeController cityTimeController;
+
     [Header("Text UI")]
     [SerializeField] private TextMeshProUGUI messageText;
 
@@ -49,6 +53,28 @@ public class DayTriggeredText : MonoBehaviour
         }
     }
 
+    // 给画框、相片等点击事件使用。
+    // 会自动根据当前游戏天数选择对应文案与声音。
+    public void ShowCurrentDay()
+    {
+        int currentDay = GetCurrentDayNumber();
+
+        switch (currentDay)
+        {
+            case 1:
+                ShowMessageAndAudio(day1Message, day1Audio);
+                break;
+
+            case 2:
+                ShowMessageAndAudio(day2Message, day2Audio);
+                break;
+
+            default:
+                ShowMessageAndAudio(day3Message, day3Audio);
+                break;
+        }
+    }
+
     public void ShowDay1()
     {
         ShowMessageAndAudio(day1Message, day1Audio);
@@ -62,6 +88,24 @@ public class DayTriggeredText : MonoBehaviour
     public void ShowDay3()
     {
         ShowMessageAndAudio(day3Message, day3Audio);
+    }
+
+    private int GetCurrentDayNumber()
+    {
+        if (cityTimeController == null)
+        {
+            Debug.LogWarning(
+                "DayTriggeredText: City Time Controller has not been assigned. Using Day 1."
+            );
+
+            return 1;
+        }
+
+        int dayNumber = Mathf.FloorToInt(
+            cityTimeController.CurrentTotalHour / 24f
+        ) + 1;
+
+        return Mathf.Clamp(dayNumber, 1, 3);
     }
 
     private void ShowMessageAndAudio(
