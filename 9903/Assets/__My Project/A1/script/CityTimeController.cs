@@ -1,430 +1,295 @@
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
-using UnityEngine.Rendering;
-
-[System.Serializable]
-public class SkyTimeKey
-{
-    [Header("Time of Day")]
-    [Range(0f, 24f)]
-    public float startHourOfDay = 0f;
-
-    [Header("HDR Skybox")]
-    public Material skyboxMaterial;
-
-    [Range(0.01f, 8f)]
-    public float skyExposure = 1f;
-
-    public Color skyTint = Color.white;
-
-    [Range(0f, 360f)]
-    public float skyRotation = 0f;
-
-    [Header("Directional Light")]
-    public Color lightColor = Color.white;
-
-    [Min(0f)]
-    public float lightIntensity = 1f;
-
-    public Vector3 lightEulerAngles = new Vector3(45f, -30f, 0f);
-
-    [Header("Ambient Light")]
-    public Color ambientSky = new Color(0.45f, 0.5f, 0.6f);
-
-    public Color ambientEquator = new Color(0.35f, 0.35f, 0.4f);
-
-    public Color ambientGround = new Color(0.2f, 0.2f, 0.2f);
-}
 
 [System.Serializable]
 public class TimedEvent
 {
-    [Header("Event")]
-    public string eventName = "Story Event";
+    public string eventName = "New Timed Event";
 
-    [Tooltip("总游戏小时。例如：第 1 天晚上 20 点填 20；第 2 天晚上 20 点填 44。")]
-    [Min(0f)]
+    [Tooltip("例如：20 = 第一天晚上 8 点；44 = 第二天晚上 8 点。")]
     public float triggerAtTotalHour = 20f;
 
-    [Tooltip("到达指定时间时触发。这里不包含任何狗或玩家控制逻辑。")]
     public UnityEvent onTriggered;
+
+    [HideInInspector]
+    public bool hasTriggered;
 }
 
 public class CityTimeController : MonoBehaviour
 {
-    [Header("Clock")]
-    [SerializeField] private bool startTimeOnPlay = true;
+    [Header("Time")]
+    [Tooltip("0 = 第一天 00:00；8 = 第一天 08:00；24 = 第二天 00:00。")]
+    [SerializeField] private float startTotalHour = 8f;
 
-    [Tooltip("从第几个总游戏小时开始。18 = 第一天傍晚 6 点。")]
-    [Min(0f)]
-    [SerializeField] private float startTotalHour = 18f;
+    [Tooltip("现实 1 秒等于多少游戏小时。测试时可以填 1。")]
+    [SerializeField] private float gameHoursPerRealSecond = 0.1f;
 
-    [Tooltip("1 = 现实 1 秒经过游戏 1 小时。测试时可填 1。")]
-    [Min(0.01f)]
-    [SerializeField] private float gameHoursPerRealSecond = 0.5f;
+    [Header("Only Two HDRs")]
+    [Tooltip("拖入白天 HDR 全景贴图。")]
+    [SerializeField] private Texture2D dayHDR;
 
-    [Tooltip("-1 = 永不自动停止。72 = 第三天结束时停止。")]
-    [SerializeField] private float stopAtTotalHour = -1f;
+    [Tooltip("拖入夜晚 HDR 全景贴图。")]
+    [SerializeField] private Texture2D nightHDR;
 
-    [Header("Sky and Lighting")]
-    [SerializeField] private Light directionalLight;
+    [Range(0f, 3f)]
+    [SerializeField] private float skyExposure = 1f;
 
-    [Tooltip("必须按照 Start Hour Of Day 从小到大排列。")]
-    [SerializeField]
-    private List<SkyTimeKey> skyKeys =
-        new List<SkyTimeKey>();
+    [Range(0f, 360f)]
+    [SerializeField] private float skyRotation = 0f;
 
-    [Tooltip("切换到新的 HDR Skybox 时更新环境光反射。")]
-    [SerializeField] private bool updateEnvironmentOnSkyChange = true;
+    [Tooltip("天空上下颠倒时勾选。")]
+    [SerializeField] private bool flipSkyVertical = false;
+
+    [Header("Smooth Transition")]
+    [Tooltip("从夜晚开始渐变成白天的时间。")]
+    [Range(0f, 23f)]
+    [SerializeField] private float sunriseHour = 6f;
+
+    [Tooltip("从白天开始渐变成夜晚的时间。")]
+    [Range(0f, 23f)]
+    [SerializeField] private float sunsetHour = 18f;
+
+    [Tooltip("每次渐变持续多少游戏小时。建议 1.5 - 3。")]
+    [Range(0.1f, 8f)]
+    [SerializeField] private float transitionDurationHours = 2f;
 
     [Header("Timed Events")]
-    [SerializeField]
-    private List<TimedEvent> timedEvents =
-        new List<TimedEvent>();
+    [SerializeField] private TimedEvent[] timedEvents;
 
-    public float CurrentTotalHour => currentTotalHour;
-
-    public float CurrentHourOfDay
+    public float CurrentTotalHour
     {
-        get { return Mathf.Repeat(currentTotalHour, 24f); }
+        get { return currentTotalHour; }
     }
 
-    public bool IsTimeRunning => timeRunning;
-
-    private readonly List<Material> runtimeSkyboxes =
-        new List<Material>();
-
-    private bool[] eventAlreadyTriggered;
+    public int CurrentDayNumber
+    {
+        get
+        {
+            return Mathf.FloorToInt(
+                currentTotalHour / 24f
+            ) + 1;
+        }
+    }
 
     private float currentTotalHour;
-    private bool timeRunning;
-    private int activeSkyIndex = -1;
+    private Material runtimeSkybox;
+    private float lastEnvironmentUpdateTime;
+
+    private static readonly int DayTextureID =
+        Shader.PropertyToID("_DayTex");
+
+    private static readonly int NightTextureID =
+        Shader.PropertyToID("_NightTex");
+
+    private static readonly int BlendID =
+        Shader.PropertyToID("_Blend");
+
+    private static readonly int ExposureID =
+        Shader.PropertyToID("_Exposure");
+
+    private static readonly int RotationID =
+        Shader.PropertyToID("_Rotation");
+
+    private static readonly int FlipYID =
+        Shader.PropertyToID("_FlipY");
 
     private void Awake()
     {
         currentTotalHour = startTotalHour;
 
-        CreateRuntimeSkyboxes();
-
-        eventAlreadyTriggered = new bool[timedEvents.Count];
-
-        // 开始时间之前的事件视为已经发生，不会在游戏一开始全部触发
-        for (int i = 0; i < timedEvents.Count; i++)
-        {
-            if (timedEvents[i].triggerAtTotalHour <= startTotalHour)
-            {
-                eventAlreadyTriggered[i] = true;
-            }
-        }
-
-        RenderSettings.ambientMode = AmbientMode.Trilight;
-    }
-
-    private void Start()
-    {
-        UpdateSkyAndLighting();
-
-        if (startTimeOnPlay)
-        {
-            StartTime();
-        }
+        SetupSkybox();
+        PrepareTimedEvents();
     }
 
     private void Update()
     {
-        if (!timeRunning)
-        {
-            return;
-        }
-
-        float previousTotalHour = currentTotalHour;
-
         currentTotalHour +=
-            gameHoursPerRealSecond * Time.deltaTime;
+            gameHoursPerRealSecond *
+            Time.deltaTime;
 
-        if (stopAtTotalHour >= 0f &&
-            currentTotalHour >= stopAtTotalHour)
+        UpdateSkybox();
+        CheckTimedEvents();
+    }
+
+    private void SetupSkybox()
+    {
+        Shader blendShader = Shader.Find(
+            "Skybox/DayNightPanoramicBlend"
+        );
+
+        if (blendShader == null)
         {
-            currentTotalHour = stopAtTotalHour;
-            timeRunning = false;
+            Debug.LogError(
+                "Cannot find shader: Skybox/DayNightPanoramicBlend"
+            );
+
+            enabled = false;
+            return;
         }
 
-        UpdateSkyAndLighting();
+        runtimeSkybox = new Material(blendShader);
 
-        CheckTimedEvents(
-            previousTotalHour,
-            currentTotalHour
+        runtimeSkybox.SetTexture(DayTextureID, dayHDR);
+        runtimeSkybox.SetTexture(NightTextureID, nightHDR);
+
+        runtimeSkybox.SetFloat(ExposureID, skyExposure);
+        runtimeSkybox.SetFloat(RotationID, skyRotation);
+
+        runtimeSkybox.SetFloat(
+            FlipYID,
+            flipSkyVertical ? 1f : 0f
         );
+
+        RenderSettings.skybox = runtimeSkybox;
+
+        UpdateSkybox();
     }
 
-    private void OnDestroy()
+    private void UpdateSkybox()
     {
-        for (int i = 0; i < runtimeSkyboxes.Count; i++)
-        {
-            if (runtimeSkyboxes[i] != null)
-            {
-                Destroy(runtimeSkyboxes[i]);
-            }
-        }
-    }
-
-    public void StartTime()
-    {
-        timeRunning = true;
-    }
-
-    public void PauseTime()
-    {
-        timeRunning = false;
-    }
-
-    public void SetTime(float newTotalHour)
-    {
-        currentTotalHour = Mathf.Max(0f, newTotalHour);
-        UpdateSkyAndLighting();
-    }
-
-    public void SetTimeAndTriggerPassedEvents(float newTotalHour)
-    {
-        float oldTime = currentTotalHour;
-
-        currentTotalHour = Mathf.Max(0f, newTotalHour);
-
-        UpdateSkyAndLighting();
-
-        CheckTimedEvents(
-            oldTime,
-            currentTotalHour
-        );
-    }
-
-    private void UpdateSkyAndLighting()
-    {
-        if (skyKeys == null || skyKeys.Count == 0)
+        if (runtimeSkybox == null)
         {
             return;
         }
 
-        int currentIndex = GetCurrentSkyIndex();
-        int nextIndex = (currentIndex + 1) % skyKeys.Count;
-
-        SkyTimeKey currentKey = skyKeys[currentIndex];
-        SkyTimeKey nextKey = skyKeys[nextIndex];
-
-        float hourOfDay = CurrentHourOfDay;
-
-        float segmentLength = Mathf.Repeat(
-            nextKey.startHourOfDay -
-            currentKey.startHourOfDay,
+        float hourOfDay = Mathf.Repeat(
+            currentTotalHour,
             24f
         );
 
-        if (segmentLength < 0.01f)
+        float dayBlend = GetDayBlend(hourOfDay);
+
+        runtimeSkybox.SetFloat(BlendID, dayBlend);
+        runtimeSkybox.SetFloat(ExposureID, skyExposure);
+        runtimeSkybox.SetFloat(RotationID, skyRotation);
+
+        if (Time.time - lastEnvironmentUpdateTime > 2f)
         {
-            segmentLength = 24f;
-        }
-
-        float hoursIntoSegment = Mathf.Repeat(
-            hourOfDay - currentKey.startHourOfDay,
-            24f
-        );
-
-        float blend = Mathf.Clamp01(
-            hoursIntoSegment / segmentLength
-        );
-
-        if (activeSkyIndex != currentIndex)
-        {
-            activeSkyIndex = currentIndex;
-            SetSkyboxMaterial(currentIndex);
-
-            if (updateEnvironmentOnSkyChange)
-            {
-                DynamicGI.UpdateEnvironment();
-            }
-        }
-
-        Material activeSkybox = GetRuntimeSkybox(currentIndex);
-
-        ApplySkyboxProperties(
-            activeSkybox,
-            Mathf.LerpAngle(
-                currentKey.skyRotation,
-                nextKey.skyRotation,
-                blend
-            ),
-            Mathf.Lerp(
-                currentKey.skyExposure,
-                nextKey.skyExposure,
-                blend
-            ),
-            Color.Lerp(
-                currentKey.skyTint,
-                nextKey.skyTint,
-                blend
-            )
-        );
-
-        RenderSettings.ambientMode = AmbientMode.Trilight;
-
-        RenderSettings.ambientSkyColor = Color.Lerp(
-            currentKey.ambientSky,
-            nextKey.ambientSky,
-            blend
-        );
-
-        RenderSettings.ambientEquatorColor = Color.Lerp(
-            currentKey.ambientEquator,
-            nextKey.ambientEquator,
-            blend
-        );
-
-        RenderSettings.ambientGroundColor = Color.Lerp(
-            currentKey.ambientGround,
-            nextKey.ambientGround,
-            blend
-        );
-
-        if (directionalLight != null)
-        {
-            directionalLight.color = Color.Lerp(
-                currentKey.lightColor,
-                nextKey.lightColor,
-                blend
-            );
-
-            directionalLight.intensity = Mathf.Lerp(
-                currentKey.lightIntensity,
-                nextKey.lightIntensity,
-                blend
-            );
-
-            directionalLight.transform.rotation =
-                Quaternion.Slerp(
-                    Quaternion.Euler(
-                        currentKey.lightEulerAngles
-                    ),
-                    Quaternion.Euler(
-                        nextKey.lightEulerAngles
-                    ),
-                    blend
-                );
+            DynamicGI.UpdateEnvironment();
+            lastEnvironmentUpdateTime = Time.time;
         }
     }
 
-    private int GetCurrentSkyIndex()
+    private float GetDayBlend(float hourOfDay)
     {
-        float hourOfDay = CurrentHourOfDay;
+        float sunriseEnd =
+            sunriseHour + transitionDurationHours;
 
-        int selectedIndex = skyKeys.Count - 1;
+        float sunsetEnd =
+            sunsetHour + transitionDurationHours;
 
-        for (int i = 0; i < skyKeys.Count; i++)
+        // 例如 06:00 到 08:00：夜 HDR 慢慢变白天 HDR
+        if (hourOfDay >= sunriseHour &&
+            hourOfDay < sunriseEnd)
         {
-            if (hourOfDay >= skyKeys[i].startHourOfDay)
-            {
-                selectedIndex = i;
-            }
-            else
-            {
-                break;
-            }
+            float progress = Mathf.InverseLerp(
+                sunriseHour,
+                sunriseEnd,
+                hourOfDay
+            );
+
+            return Mathf.SmoothStep(0f, 1f, progress);
         }
 
-        return selectedIndex;
+        // 完整白天
+        if (hourOfDay >= sunriseEnd &&
+            hourOfDay < sunsetHour)
+        {
+            return 1f;
+        }
+
+        // 例如 18:00 到 20:00：白天 HDR 慢慢变夜 HDR
+        if (hourOfDay >= sunsetHour &&
+            hourOfDay < sunsetEnd)
+        {
+            float progress = Mathf.InverseLerp(
+                sunsetHour,
+                sunsetEnd,
+                hourOfDay
+            );
+
+            return Mathf.SmoothStep(1f, 0f, progress);
+        }
+
+        // 完整夜晚
+        return 0f;
     }
 
-    private void CheckTimedEvents(
-        float previousTime,
-        float currentTime)
+    private void PrepareTimedEvents()
     {
-        for (int i = 0; i < timedEvents.Count; i++)
+        if (timedEvents == null)
         {
-            if (eventAlreadyTriggered[i])
+            return;
+        }
+
+        for (int i = 0; i < timedEvents.Length; i++)
+        {
+            if (timedEvents[i] == null)
             {
                 continue;
             }
 
-            float triggerTime =
-                timedEvents[i].triggerAtTotalHour;
-
-            if (previousTime < triggerTime &&
-                currentTime >= triggerTime)
-            {
-                eventAlreadyTriggered[i] = true;
-
-                if (timedEvents[i].onTriggered != null)
-                {
-                    timedEvents[i].onTriggered.Invoke();
-                }
-            }
+            timedEvents[i].hasTriggered =
+                timedEvents[i].triggerAtTotalHour <
+                currentTotalHour;
         }
     }
 
-    private void CreateRuntimeSkyboxes()
+    private void CheckTimedEvents()
     {
-        runtimeSkyboxes.Clear();
-
-        for (int i = 0; i < skyKeys.Count; i++)
-        {
-            Material original = skyKeys[i].skyboxMaterial;
-
-            if (original == null)
-            {
-                runtimeSkyboxes.Add(null);
-            }
-            else
-            {
-                runtimeSkyboxes.Add(new Material(original));
-            }
-        }
-    }
-
-    private void SetSkyboxMaterial(int index)
-    {
-        Material skybox = GetRuntimeSkybox(index);
-
-        if (skybox != null)
-        {
-            RenderSettings.skybox = skybox;
-        }
-    }
-
-    private Material GetRuntimeSkybox(int index)
-    {
-        if (index < 0 ||
-            index >= runtimeSkyboxes.Count)
-        {
-            return null;
-        }
-
-        return runtimeSkyboxes[index];
-    }
-
-    private void ApplySkyboxProperties(
-        Material skybox,
-        float rotation,
-        float exposure,
-        Color tint)
-    {
-        if (skybox == null)
+        if (timedEvents == null)
         {
             return;
         }
 
-        if (skybox.HasProperty("_Rotation"))
+        for (int i = 0; i < timedEvents.Length; i++)
         {
-            skybox.SetFloat("_Rotation", rotation);
+            TimedEvent timedEvent = timedEvents[i];
+
+            if (timedEvent == null ||
+                timedEvent.hasTriggered)
+            {
+                continue;
+            }
+
+            if (currentTotalHour >=
+                timedEvent.triggerAtTotalHour)
+            {
+                timedEvent.hasTriggered = true;
+
+                timedEvent.onTriggered?.Invoke();
+            }
+        }
+    }
+
+    public void ResetTimedEvents()
+    {
+        if (timedEvents == null)
+        {
+            return;
         }
 
-        if (skybox.HasProperty("_Exposure"))
+        for (int i = 0; i < timedEvents.Length; i++)
         {
-            skybox.SetFloat("_Exposure", exposure);
+            if (timedEvents[i] != null)
+            {
+                timedEvents[i].hasTriggered = false;
+            }
+        }
+    }
+
+    private void OnDestroy()
+    {
+        if (runtimeSkybox == null)
+        {
+            return;
         }
 
-        if (skybox.HasProperty("_Tint"))
+        if (RenderSettings.skybox == runtimeSkybox)
         {
-            skybox.SetColor("_Tint", tint);
+            RenderSettings.skybox = null;
         }
+
+        Destroy(runtimeSkybox);
     }
 }
