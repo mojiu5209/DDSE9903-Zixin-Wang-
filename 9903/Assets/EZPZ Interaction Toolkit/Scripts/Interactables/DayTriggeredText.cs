@@ -5,27 +5,39 @@ using UnityEngine;
 public class DayTriggeredText : MonoBehaviour
 {
     [Header("Text UI")]
-    [Tooltip("拖入 Canvas 里的 TextMeshProUGUI 文字。")]
     [SerializeField] private TextMeshProUGUI messageText;
 
-    [Tooltip("每次文字显示多久。设为 0 表示不自动隐藏。")]
-    [SerializeField] private float displayDuration = 3f;
+    [SerializeField] private float displayDuration = 5f;
 
-    [Header("Day Messages")]
+    [Header("Day 1")]
     [TextArea(2, 4)]
     [SerializeField]
     private string day1Message =
         "It's getting late. I should go home.";
 
+    [SerializeField] private AudioClip day1Audio;
+
+    [Header("Day 2")]
     [TextArea(2, 4)]
     [SerializeField]
     private string day2Message =
         "It is late again... Why do I keep thinking about that dog?";
 
+    [SerializeField] private AudioClip day2Audio;
+
+    [Header("Day 3")]
     [TextArea(2, 4)]
     [SerializeField]
     private string day3Message =
         "I cannot ignore this feeling anymore.";
+
+    [SerializeField] private AudioClip day3Audio;
+
+    [Header("Audio Settings")]
+    [SerializeField] private AudioSource audioSource;
+
+    [Range(0f, 1f)]
+    [SerializeField] private float volume = 1f;
 
     private Coroutine hideRoutine;
 
@@ -37,60 +49,44 @@ public class DayTriggeredText : MonoBehaviour
         }
     }
 
-    // 第一天触发
-    public void ShowDay1Text()
+    public void ShowDay1()
     {
-        ShowMessage(day1Message);
+        ShowMessageAndAudio(day1Message, day1Audio);
     }
 
-    // 第二天触发
-    public void ShowDay2Text()
+    public void ShowDay2()
     {
-        ShowMessage(day2Message);
+        ShowMessageAndAudio(day2Message, day2Audio);
     }
 
-    // 第三天触发
-    public void ShowDay3Text()
+    public void ShowDay3()
     {
-        ShowMessage(day3Message);
+        ShowMessageAndAudio(day3Message, day3Audio);
     }
 
-    // 你也可以在其他 Unity Event 中直接调用这个
-    public void HideText()
+    private void ShowMessageAndAudio(
+        string message,
+        AudioClip audioClip)
     {
         if (hideRoutine != null)
         {
             StopCoroutine(hideRoutine);
-            hideRoutine = null;
         }
 
         if (messageText != null)
         {
-            messageText.gameObject.SetActive(false);
-        }
-    }
+            messageText.text = message;
+            messageText.gameObject.SetActive(true);
 
-    private void ShowMessage(string newMessage)
-    {
-        if (messageText == null)
-        {
-            Debug.LogWarning(
-                "DayTriggeredText: Message Text has not been assigned."
-            );
-            return;
+            if (displayDuration > 0f)
+            {
+                hideRoutine = StartCoroutine(HideAfterTime());
+            }
         }
 
-        if (hideRoutine != null)
+        if (audioSource != null && audioClip != null)
         {
-            StopCoroutine(hideRoutine);
-        }
-
-        messageText.text = newMessage;
-        messageText.gameObject.SetActive(true);
-
-        if (displayDuration > 0f)
-        {
-            hideRoutine = StartCoroutine(HideAfterTime());
+            audioSource.PlayOneShot(audioClip, volume);
         }
     }
 
