@@ -9,22 +9,50 @@ public class NightDogTransition : MonoBehaviour
     [SerializeField] private GameObject ezpzPlayer;
     [SerializeField] private Transform morningPlayerSpawn;
 
-    [Header("Dog Cinematic")]
-    [SerializeField] private Camera dogViewCamera;
+    [Header("Dog")]
     [SerializeField] private Transform dogTransform;
-
-    [Tooltip("拖入挂在 DOG 根物体上的 DogRouteWalker。")]
     [SerializeField] private DogRouteWalker dogRouteWalker;
 
+    [Header("Night Route")]
+    [Tooltip("0 = 第一晚，1 = 第二晚，2 = 第三晚")]
+    [SerializeField] private int nightRouteIndex = 0;
+
+    [Header("Dog Camera")]
+    [SerializeField] private Camera dogViewCamera;
+
+    [Tooltip("拖入 Head 下面的 DogCameraAnchor。不要拖 DOG 根物体。")]
+    [SerializeField] private Transform dogCameraAnchor;
+
+    [Tooltip("相机在 DogCameraAnchor 里的本地位置。")]
     [SerializeField]
     private Vector3 cameraLocalOffset =
-        new Vector3(0f, 0.45f, 0.15f);
+        new Vector3(0f, 0f, 0f);
 
+    [Tooltip("相机在 DogCameraAnchor 里的本地旋转。")]
     [SerializeField]
     private Vector3 cameraLocalRotation =
-        new Vector3(5f, 0f, 0f);
+        new Vector3(0f, 0f, 0f);
 
-    [SerializeField] private float cameraFollowSpeed = 12f;
+    [Header("Walking Camera Motion")]
+    [SerializeField] private bool enableWalkingCameraMotion = true;
+
+    [Tooltip("走路时上下起伏。")]
+    [SerializeField] private float headBobHeight = 0.03f;
+
+    [Tooltip("走路时左右轻微晃动。")]
+    [SerializeField] private float headBobSideAmount = 0.02f;
+
+    [Tooltip("走路晃动速度。")]
+    [SerializeField] private float headBobSpeed = 8f;
+
+    [Tooltip("走路时左右东张西望角度。")]
+    [SerializeField] private float lookYawAmount = 8f;
+
+    [Tooltip("走路时上下观察角度。")]
+    [SerializeField] private float lookPitchAmount = 3f;
+
+    [Tooltip("东张西望变化速度。")]
+    [SerializeField] private float lookWanderSpeed = 0.7f;
 
     [Header("UI")]
     [SerializeField] private Image blackFade;
@@ -51,6 +79,11 @@ public class NightDogTransition : MonoBehaviour
     private bool dogViewActive;
     private bool hasStartedNight;
     private bool hasReturnedToPlayer;
+    private float dogViewStartTime;
+
+    private Transform originalCameraParent;
+    private Vector3 originalCameraLocalPosition;
+    private Quaternion originalCameraLocalRotation;
 
     private void Awake()
     {
@@ -67,7 +100,7 @@ public class NightDogTransition : MonoBehaviour
     {
         if (dogViewActive)
         {
-            FollowDogCamera();
+            UpdateDogCameraLocalMotion();
         }
     }
 
@@ -112,26 +145,20 @@ public class NightDogTransition : MonoBehaviour
             ezpzPlayer.SetActive(false);
         }
 
+        AttachCameraToDogHead();
+
         if (dogViewCamera != null)
         {
             dogViewCamera.gameObject.SetActive(true);
         }
 
-        SetDogCameraInstant();
+        dogViewStartTime = Time.time;
+        dogViewActive = true;
 
-        // 黑屏切到狗视角后，让狗开始走路线。
         if (dogRouteWalker != null)
         {
-            dogRouteWalker.BeginRoute();
+            dogRouteWalker.BeginRoute(nightRouteIndex);
         }
-        else
-        {
-            Debug.LogWarning(
-                "NightDogTransition: Dog Route Walker is not assigned."
-            );
-        }
-
-        dogViewActive = true;
 
         yield return null;
 
@@ -157,11 +184,12 @@ public class NightDogTransition : MonoBehaviour
             morningFadeToBlackDuration
         ));
 
-        // 早上回玩家前停止狗路线。
         if (dogRouteWalker != null)
         {
             dogRouteWalker.StopRoute();
         }
+
+        DetachCameraFromDogHead();
 
         if (dogViewCamera != null)
         {
@@ -192,50 +220,125 @@ public class NightDogTransition : MonoBehaviour
         SetSubtitle("");
     }
 
-    private void FollowDogCamera()
+    private void AttachCameraToDogHead()
     {
-        if (dogViewCamera == null || dogTransform == null)
+        if (dogViewCamera == null)
         {
             return;
         }
 
-        Vector3 targetPosition = dogTransform.TransformPoint(
-            cameraLocalOffset
+        if (dogCameraAnchor == null)
+        {
+            Debug.LogWarning(
+                "NightDogTransition: Dog Camera Anchor is empty. Camera will follow DOG root, not head."
+            );
+
+            dogCameraAnchor = dogTransform;
+        }
+
+        originalCameraParent = dogViewCamera.transform.parent;
+        originalCameraLocalPosition =
+            dogViewCamera.transform.localPosition;
+        originalCameraLocalRotation =
+            dogViewCamera.transform.localRotation;
+
+        dogViewCamera.transform.SetParent(
+            dogCameraAnchor,
+            false
         );
 
-        Quaternion targetRotation =
-            dogTransform.rotation *
+        dogViewCamera.transform.localPosition =
+            cameraLocalOffset;
+
+        dogViewCamera.transform.localRotation =
             Quaternion.Euler(cameraLocalRotation);
-
-        float followAmount =
-            cameraFollowSpeed * Time.deltaTime;
-
-        dogViewCamera.transform.position = Vector3.Lerp(
-            dogViewCamera.transform.position,
-            targetPosition,
-            followAmount
-        );
-
-        dogViewCamera.transform.rotation = Quaternion.Slerp(
-            dogViewCamera.transform.rotation,
-            targetRotation,
-            followAmount
-        );
     }
 
-    private void SetDogCameraInstant()
+    private void DetachCameraFromDogHead()
     {
-        if (dogViewCamera == null || dogTransform == null)
+        if (dogViewCamera == null)
         {
             return;
         }
 
-        dogViewCamera.transform.position =
-            dogTransform.TransformPoint(cameraLocalOffset);
+        dogViewCamera.transform.SetParent(
+            originalCameraParent,
+            false
+        );
 
-        dogViewCamera.transform.rotation =
-            dogTransform.rotation *
-            Quaternion.Euler(cameraLocalRotation);
+        dogViewCamera.transform.localPosition =
+            originalCameraLocalPosition;
+
+        dogViewCamera.transform.localRotation =
+            originalCameraLocalRotation;
+    }
+
+    private void UpdateDogCameraLocalMotion()
+    {
+        if (dogViewCamera == null)
+        {
+            return;
+        }
+
+        bool dogIsWalking =
+            dogRouteWalker != null &&
+            dogRouteWalker.IsWalkingRoute;
+
+        Vector3 finalLocalPosition = cameraLocalOffset;
+        Vector3 finalLocalRotation = cameraLocalRotation;
+
+        if (enableWalkingCameraMotion && dogIsWalking)
+        {
+            float timePassed = Time.time - dogViewStartTime;
+
+            float bob = Mathf.Sin(timePassed * headBobSpeed);
+
+            finalLocalPosition += new Vector3(
+                bob * headBobSideAmount,
+                Mathf.Abs(bob) * headBobHeight,
+                0f
+            );
+
+            float yawNoise = Mathf.PerlinNoise(
+                timePassed * lookWanderSpeed,
+                0.15f
+            );
+
+            float pitchNoise = Mathf.PerlinNoise(
+                0.75f,
+                timePassed * lookWanderSpeed
+            );
+
+            float yaw =
+                (yawNoise - 0.5f) *
+                2f *
+                lookYawAmount;
+
+            float pitch =
+                (pitchNoise - 0.5f) *
+                2f *
+                lookPitchAmount;
+
+            finalLocalRotation += new Vector3(
+                pitch,
+                yaw,
+                0f
+            );
+        }
+
+        dogViewCamera.transform.localPosition =
+            Vector3.Lerp(
+                dogViewCamera.transform.localPosition,
+                finalLocalPosition,
+                Time.deltaTime * 12f
+            );
+
+        dogViewCamera.transform.localRotation =
+            Quaternion.Slerp(
+                dogViewCamera.transform.localRotation,
+                Quaternion.Euler(finalLocalRotation),
+                Time.deltaTime * 10f
+            );
     }
 
     private IEnumerator FadeBlack(

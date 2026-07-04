@@ -1,60 +1,104 @@
 using System.Collections;
 using UnityEngine;
 
+[System.Serializable]
+public class DogRouteStop
+{
+    [Tooltip("狗要走到的位置。")]
+    public Transform routePoint;
+
+    [Tooltip("到达后触发的 Animator Trigger，例如 LOOK、Sniff、First。")]
+    public string animationTrigger;
+
+    [Tooltip("该停留动画播放多久。")]
+    public float animationDuration = 2f;
+
+    [Tooltip("到达路线点后，动画开始前停几秒。")]
+    public float pauseBeforeAnimation = 0f;
+}
+
+[System.Serializable]
+public class DogNightRoute
+{
+    [Tooltip("例如 Night 1 Route。")]
+    public string routeName = "Night Route";
+
+    [Tooltip("这一晚狗经过的所有路线点。")]
+    public DogRouteStop[] routeStops;
+}
+
 public class DogRouteWalker : MonoBehaviour
 {
-    [Header("Route Points")]
-    [Tooltip("按顺序拖入狗要经过的 Empty 路线点。")]
-    [SerializeField] private Transform[] routePoints;
+    [Header("Night Routes")]
+    [Tooltip("每个 Element 代表一晚不同的路线。")]
+    [SerializeField] private DogNightRoute[] nightRoutes;
 
     [Header("Movement")]
     [SerializeField] private float moveSpeed = 1.5f;
     [SerializeField] private float turnSpeed = 6f;
     [SerializeField] private float arriveDistance = 0.08f;
 
-    [Tooltip("每个路线点到达后停留几秒。")]
-    [SerializeField] private float waitAtEachPoint = 0f;
-
     [Header("Animation")]
+    [Tooltip("拖入 Doggo_Graphics 上的 Animator。")]
     [SerializeField] private Animator dogAnimator;
 
-    [Tooltip("Animator 中控制走路的 Bool 参数名称。")]
+    [Tooltip("Animator 里的 Bool 参数名称。")]
     [SerializeField] private string walkingBoolName = "IsWalking";
-
-    [Header("Route Settings")]
-    [Tooltip("勾选后，跑到最后一个点会重新从第一个点开始。")]
-    [SerializeField] private bool loopRoute = false;
-
-    [Tooltip("勾选后，游戏开始就自动走。夜晚剧情建议取消勾选。")]
-    [SerializeField] private bool playOnStart = false;
 
     private Coroutine routeRoutine;
     private bool isWalkingRoute;
+    private bool isPlayingStopAnimation;
+
+    public bool IsWalkingRoute
+    {
+        get
+        {
+            return isWalkingRoute && !isPlayingStopAnimation;
+        }
+    }
 
     private void Start()
     {
         SetWalkingAnimation(false);
-
-        if (playOnStart)
-        {
-            BeginRoute();
-        }
     }
 
-    // 在 NightDogTransition 或 CityTimeController 中调用。
-    public void BeginRoute()
+    // 第 0 条路线 = 第 1 晚
+    // 第 1 条路线 = 第 2 晚
+    // 第 2 条路线 = 第 3 晚
+    public void BeginRoute(int routeIndex)
     {
-        if (routePoints == null || routePoints.Length == 0)
+        if (nightRoutes == null || nightRoutes.Length == 0)
         {
             Debug.LogWarning(
-                "DogRouteWalker: Please assign route points."
+                "DogRouteWalker: No night routes have been assigned."
+            );
+            return;
+        }
+
+        if (routeIndex < 0 || routeIndex >= nightRoutes.Length)
+        {
+            Debug.LogWarning(
+                "DogRouteWalker: Invalid route index: " + routeIndex
+            );
+            return;
+        }
+
+        DogNightRoute selectedRoute = nightRoutes[routeIndex];
+
+        if (selectedRoute.routeStops == null ||
+            selectedRoute.routeStops.Length == 0)
+        {
+            Debug.LogWarning(
+                "DogRouteWalker: This night route has no route stops."
             );
             return;
         }
 
         StopRoute();
 
-        routeRoutine = StartCoroutine(FollowRouteRoutine());
+        routeRoutine = StartCoroutine(
+            FollowRouteRoutine(selectedRoute)
+        );
     }
 
     public void StopRoute()
@@ -66,55 +110,66 @@ public class DogRouteWalker : MonoBehaviour
         }
 
         isWalkingRoute = false;
+        isPlayingStopAnimation = false;
+
         SetWalkingAnimation(false);
     }
 
-    private IEnumerator FollowRouteRoutine()
+    private IEnumerator FollowRouteRoutine(DogNightRoute route)
     {
         isWalkingRoute = true;
 
-        int pointIndex = 0;
-
-        while (isWalkingRoute)
+        for (int stopIndex = 0;
+             stopIndex < route.routeStops.Length;
+             stopIndex++)
         {
-            Transform targetPoint = routePoints[pointIndex];
+            DogRouteStop currentStop =
+                route.routeStops[stopIndex];
 
-            if (targetPoint == null)
+            if (currentStop == null ||
+                currentStop.routePoint == null)
             {
-                pointIndex++;
                 continue;
             }
 
             yield return StartCoroutine(
-                WalkToPoint(targetPoint)
+                WalkToPoint(currentStop.routePoint)
             );
 
-            if (waitAtEachPoint > 0f)
-            {
-                SetWalkingAnimation(false);
+            isPlayingStopAnimation = true;
+            SetWalkingAnimation(false);
 
+            if (currentStop.pauseBeforeAnimation > 0f)
+            {
                 yield return new WaitForSeconds(
-                    waitAtEachPoint
+                    currentStop.pauseBeforeAnimation
                 );
             }
 
-            pointIndex++;
-
-            if (pointIndex >= routePoints.Length)
+            if (dogAnimator != null &&
+                !string.IsNullOrEmpty(
+                    currentStop.animationTrigger
+                ))
             {
-                if (loopRoute)
-                {
-                    pointIndex = 0;
-                }
-                else
-                {
-                    break;
-                }
+                dogAnimator.SetTrigger(
+                    currentStop.animationTrigger
+                );
             }
+
+            if (currentStop.animationDuration > 0f)
+            {
+                yield return new WaitForSeconds(
+                    currentStop.animationDuration
+                );
+            }
+
+            isPlayingStopAnimation = false;
         }
 
         isWalkingRoute = false;
+        isPlayingStopAnimation = false;
         routeRoutine = null;
+
         SetWalkingAnimation(false);
     }
 
@@ -125,8 +180,6 @@ public class DogRouteWalker : MonoBehaviour
         while (true)
         {
             Vector3 targetPosition = targetPoint.position;
-
-            // 保持狗原本的高度，避免上下漂浮。
             targetPosition.y = transform.position.y;
 
             Vector3 direction =
@@ -140,12 +193,11 @@ public class DogRouteWalker : MonoBehaviour
                 break;
             }
 
-            Vector3 flatDirection = direction.normalized;
-
-            Quaternion targetRotation = Quaternion.LookRotation(
-                flatDirection,
-                Vector3.up
-            );
+            Quaternion targetRotation =
+                Quaternion.LookRotation(
+                    direction.normalized,
+                    Vector3.up
+                );
 
             transform.rotation = Quaternion.Slerp(
                 transform.rotation,
