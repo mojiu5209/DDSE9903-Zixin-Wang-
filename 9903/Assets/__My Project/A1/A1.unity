@@ -20768,14 +20768,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CityTimeController
   startTotalHour: 10
-  gameHoursPerRealSecond: 0.08
+  gameHoursPerRealSecond: 0.1
   dayHDR: {fileID: 2800000, guid: a8bcfcf42f2d846d9ab5d5d9dfa218eb, type: 3}
   nightHDR: {fileID: 2800000, guid: 6e644059c2ded45c9aeb65ea15102452, type: 3}
   skyRotation: 360
   flipSkyVertical: 0
   daySkyExposure: 1
   nightSkyExposure: 0.1
-  directionalLight: {fileID: 809323206}
+  directionalLight: {fileID: 0}
   dayLightIntensity: 1
   dayAmbientIntensity: 1
   nightAmbientIntensity: 0.12
@@ -24510,9 +24510,6 @@ PrefabInstance:
       addedObject: {fileID: 940871879}
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 3fd65faac8c22da4ebb409266a49c1f8, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 940871881}
-    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 3fd65faac8c22da4ebb409266a49c1f8, type: 3}
-      insertIndex: -1
       addedObject: {fileID: 940871883}
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 3fd65faac8c22da4ebb409266a49c1f8, type: 3}
       insertIndex: -1
@@ -24598,31 +24595,6 @@ MonoBehaviour:
   arriveDistance: 1
   dogAnimator: {fileID: 398064104}
   walkingBoolName: IsWalking
---- !u!143 &940871881
-CharacterController:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 839891508}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Height: 2
-  m_Radius: 0.5
-  m_SlopeLimit: 45
-  m_StepOffset: 0.3
-  m_SkinWidth: 0.08
-  m_MinMoveDistance: 0.001
-  m_Center: {x: 0, y: 0, z: 0}
 --- !u!114 &940871882
 MonoBehaviour:
   m_ObjectHideFlags: 0
