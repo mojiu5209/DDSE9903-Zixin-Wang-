@@ -31,14 +31,33 @@ public class CityTimeController : MonoBehaviour
     [Tooltip("拖入夜晚 HDR 全景贴图。")]
     [SerializeField] private Texture2D nightHDR;
 
-    [Range(0f, 3f)]
-    [SerializeField] private float skyExposure = 1f;
-
     [Range(0f, 360f)]
     [SerializeField] private float skyRotation = 0f;
 
     [Tooltip("天空上下颠倒时勾选。")]
     [SerializeField] private bool flipSkyVertical = false;
+
+    [Header("Day / Night Brightness")]
+    [Range(0f, 3f)]
+    [SerializeField] private float daySkyExposure = 1f;
+
+    [Range(0f, 3f)]
+    [SerializeField] private float nightSkyExposure = 0.1f;
+
+    [Tooltip("拖入 Hierarchy 里的 Directional Light。")]
+    [SerializeField] private Light directionalLight;
+
+    [Range(0f, 5f)]
+    [SerializeField] private float dayLightIntensity = 1f;
+
+    [Range(0f, 5f)]
+    [SerializeField] private float nightLightIntensity = 0.03f;
+
+    [Range(0f, 3f)]
+    [SerializeField] private float dayAmbientIntensity = 1f;
+
+    [Range(0f, 3f)]
+    [SerializeField] private float nightAmbientIntensity = 0.12f;
 
     [Header("Smooth Transition")]
     [Tooltip("从夜晚开始渐变成白天的时间。")]
@@ -129,11 +148,20 @@ public class CityTimeController : MonoBehaviour
 
         runtimeSkybox = new Material(blendShader);
 
-        runtimeSkybox.SetTexture(DayTextureID, dayHDR);
-        runtimeSkybox.SetTexture(NightTextureID, nightHDR);
+        runtimeSkybox.SetTexture(
+            DayTextureID,
+            dayHDR
+        );
 
-        runtimeSkybox.SetFloat(ExposureID, skyExposure);
-        runtimeSkybox.SetFloat(RotationID, skyRotation);
+        runtimeSkybox.SetTexture(
+            NightTextureID,
+            nightHDR
+        );
+
+        runtimeSkybox.SetFloat(
+            RotationID,
+            skyRotation
+        );
 
         runtimeSkybox.SetFloat(
             FlipYID,
@@ -159,9 +187,41 @@ public class CityTimeController : MonoBehaviour
 
         float dayBlend = GetDayBlend(hourOfDay);
 
-        runtimeSkybox.SetFloat(BlendID, dayBlend);
-        runtimeSkybox.SetFloat(ExposureID, skyExposure);
-        runtimeSkybox.SetFloat(RotationID, skyRotation);
+        float currentExposure = Mathf.Lerp(
+            nightSkyExposure,
+            daySkyExposure,
+            dayBlend
+        );
+
+        runtimeSkybox.SetFloat(
+            BlendID,
+            dayBlend
+        );
+
+        runtimeSkybox.SetFloat(
+            ExposureID,
+            currentExposure
+        );
+
+        runtimeSkybox.SetFloat(
+            RotationID,
+            skyRotation
+        );
+
+        if (directionalLight != null)
+        {
+            directionalLight.intensity = Mathf.Lerp(
+                nightLightIntensity,
+                dayLightIntensity,
+                dayBlend
+            );
+        }
+
+        RenderSettings.ambientIntensity = Mathf.Lerp(
+            nightAmbientIntensity,
+            dayAmbientIntensity,
+            dayBlend
+        );
 
         if (Time.time - lastEnvironmentUpdateTime > 2f)
         {
@@ -178,7 +238,7 @@ public class CityTimeController : MonoBehaviour
         float sunsetEnd =
             sunsetHour + transitionDurationHours;
 
-        // 例如 06:00 到 08:00：夜 HDR 慢慢变白天 HDR
+        // 06:00 到 08:00：夜晚渐变到白天
         if (hourOfDay >= sunriseHour &&
             hourOfDay < sunriseEnd)
         {
@@ -188,17 +248,21 @@ public class CityTimeController : MonoBehaviour
                 hourOfDay
             );
 
-            return Mathf.SmoothStep(0f, 1f, progress);
+            return Mathf.SmoothStep(
+                0f,
+                1f,
+                progress
+            );
         }
 
-        // 完整白天
+        // 白天
         if (hourOfDay >= sunriseEnd &&
             hourOfDay < sunsetHour)
         {
             return 1f;
         }
 
-        // 例如 18:00 到 20:00：白天 HDR 慢慢变夜 HDR
+        // 18:00 到 20:00：白天渐变到夜晚
         if (hourOfDay >= sunsetHour &&
             hourOfDay < sunsetEnd)
         {
@@ -208,10 +272,14 @@ public class CityTimeController : MonoBehaviour
                 hourOfDay
             );
 
-            return Mathf.SmoothStep(1f, 0f, progress);
+            return Mathf.SmoothStep(
+                1f,
+                0f,
+                progress
+            );
         }
 
-        // 完整夜晚
+        // 夜晚
         return 0f;
     }
 
