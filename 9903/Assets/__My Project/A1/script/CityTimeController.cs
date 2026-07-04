@@ -25,16 +25,12 @@ public class CityTimeController : MonoBehaviour
     [SerializeField] private float gameHoursPerRealSecond = 0.1f;
 
     [Header("Only Two HDRs")]
-    [Tooltip("拖入白天 HDR 全景贴图。")]
     [SerializeField] private Texture2D dayHDR;
-
-    [Tooltip("拖入夜晚 HDR 全景贴图。")]
     [SerializeField] private Texture2D nightHDR;
 
     [Range(0f, 360f)]
     [SerializeField] private float skyRotation = 0f;
 
-    [Tooltip("天空上下颠倒时勾选。")]
     [SerializeField] private bool flipSkyVertical = false;
 
     [Header("Day / Night Brightness")]
@@ -42,7 +38,7 @@ public class CityTimeController : MonoBehaviour
     [SerializeField] private float daySkyExposure = 1f;
 
     [Range(0f, 3f)]
-    [SerializeField] private float nightSkyExposure = 0.1f;
+    [SerializeField] private float nightSkyExposure = 0.05f;
 
     [Tooltip("拖入 Hierarchy 里的 Directional Light。")]
     [SerializeField] private Light directionalLight;
@@ -50,25 +46,19 @@ public class CityTimeController : MonoBehaviour
     [Range(0f, 5f)]
     [SerializeField] private float dayLightIntensity = 1f;
 
-    [Range(0f, 5f)]
-    [SerializeField] private float nightLightIntensity = 0.03f;
-
     [Range(0f, 3f)]
     [SerializeField] private float dayAmbientIntensity = 1f;
 
     [Range(0f, 3f)]
-    [SerializeField] private float nightAmbientIntensity = 0.12f;
+    [SerializeField] private float nightAmbientIntensity = 0.05f;
 
     [Header("Smooth Transition")]
-    [Tooltip("从夜晚开始渐变成白天的时间。")]
     [Range(0f, 23f)]
     [SerializeField] private float sunriseHour = 6f;
 
-    [Tooltip("从白天开始渐变成夜晚的时间。")]
     [Range(0f, 23f)]
     [SerializeField] private float sunsetHour = 18f;
 
-    [Tooltip("每次渐变持续多少游戏小时。建议 1.5 - 3。")]
     [Range(0.1f, 8f)]
     [SerializeField] private float transitionDurationHours = 2f;
 
@@ -208,13 +198,16 @@ public class CityTimeController : MonoBehaviour
             skyRotation
         );
 
+        // 夜晚完全关闭 Directional Light
         if (directionalLight != null)
         {
             directionalLight.intensity = Mathf.Lerp(
-                nightLightIntensity,
+                0f,
                 dayLightIntensity,
                 dayBlend
             );
+
+            directionalLight.enabled = dayBlend > 0.02f;
         }
 
         RenderSettings.ambientIntensity = Mathf.Lerp(
@@ -238,7 +231,7 @@ public class CityTimeController : MonoBehaviour
         float sunsetEnd =
             sunsetHour + transitionDurationHours;
 
-        // 06:00 到 08:00：夜晚渐变到白天
+        // 日出：夜晚 → 白天
         if (hourOfDay >= sunriseHour &&
             hourOfDay < sunriseEnd)
         {
@@ -262,7 +255,7 @@ public class CityTimeController : MonoBehaviour
             return 1f;
         }
 
-        // 18:00 到 20:00：白天渐变到夜晚
+        // 日落：白天 → 夜晚
         if (hourOfDay >= sunsetHour &&
             hourOfDay < sunsetEnd)
         {
