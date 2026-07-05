@@ -34,6 +34,19 @@ public class HospitalIntro : MonoBehaviour
     [Tooltip("把 AlbumPanel 拖进来，开场时会强制隐藏。")]
     [SerializeField] private GameObject[] uiPanelsToHideAtStart;
 
+    [Header("Wake Up Player Voice")]
+    [Tooltip("拖入 IntroManager 上的 Audio Source。")]
+    [SerializeField] private AudioSource wakeVoiceSource;
+
+    [Tooltip("拖入玩家刚醒来时的语音。")]
+    [SerializeField] private AudioClip wakeVoiceClip;
+
+    [Tooltip("画面完全睁开后，等待多久播放玩家声音。")]
+    [SerializeField] private float wakeVoiceDelay = 1f;
+
+    [Range(0f, 1f)]
+    [SerializeField] private float wakeVoiceVolume = 1f;
+
     [Header("Timing")]
     [SerializeField] private float openingBlackScreenTime = 0.8f;
     [SerializeField] private float sitUpTime = 2f;
@@ -81,25 +94,25 @@ public class HospitalIntro : MonoBehaviour
         if (whiteHaze != null)
         {
             whiteHaze.raycastTarget = false;
-        }
-
-        if (blackFade != null)
-        {
-            blackFade.raycastTarget = false;
-        }
-
-        if (whiteHaze != null)
-        {
             whiteHaze.gameObject.SetActive(true);
         }
 
         if (blackFade != null)
         {
+            blackFade.raycastTarget = false;
             blackFade.gameObject.SetActive(true);
         }
 
         SetImageAlpha(blackFade, 1f);
         SetImageAlpha(whiteHaze, 0f);
+
+        if (wakeVoiceSource != null)
+        {
+            wakeVoiceSource.playOnAwake = false;
+            wakeVoiceSource.loop = false;
+            wakeVoiceSource.spatialBlend = 0f;
+        }
+
         SetSubtitle("");
     }
 
@@ -115,7 +128,7 @@ public class HospitalIntro : MonoBehaviour
 
         yield return new WaitForSeconds(openingBlackScreenTime);
 
-        // 第一次睁眼：只出现一点点画面
+        // 第一次睁眼
         yield return StartCoroutine(BlinkOpen(
             0.65f,
             0.32f,
@@ -126,7 +139,7 @@ public class HospitalIntro : MonoBehaviour
 
         yield return StartCoroutine(BlinkClose(0.12f));
 
-        // 第二次睁眼：看见更多轮廓
+        // 第二次睁眼
         yield return new WaitForSeconds(0.08f);
 
         yield return StartCoroutine(BlinkOpen(
@@ -139,7 +152,7 @@ public class HospitalIntro : MonoBehaviour
 
         yield return StartCoroutine(BlinkClose(0.10f));
 
-        // 第三次睁眼：基本能辨认病房
+        // 第三次睁眼
         yield return new WaitForSeconds(0.10f);
 
         yield return StartCoroutine(BlinkOpen(
@@ -152,7 +165,7 @@ public class HospitalIntro : MonoBehaviour
 
         yield return StartCoroutine(BlinkClose(0.08f));
 
-        // 第四次睁眼：恢复清晰
+        // 第四次睁眼：画面完全清楚
         yield return new WaitForSeconds(0.12f);
 
         yield return StartCoroutine(BlinkOpen(
@@ -160,6 +173,11 @@ public class HospitalIntro : MonoBehaviour
             0f,
             0.80f
         ));
+
+        // 玩家醒来后 1 秒播放自己的声音
+        yield return new WaitForSeconds(wakeVoiceDelay);
+
+        PlayWakeVoice();
 
         // 躺着看天花板 → 慢慢坐起
         if (introCamera != null &&
@@ -244,6 +262,25 @@ public class HospitalIntro : MonoBehaviour
         ));
 
         SetSubtitle("");
+    }
+
+    private void PlayWakeVoice()
+    {
+        if (wakeVoiceSource == null || wakeVoiceClip == null)
+        {
+            Debug.LogWarning(
+                "HospitalIntro: Wake Voice Source 或 Wake Voice Clip 没有设置。"
+            );
+
+            return;
+        }
+
+        wakeVoiceSource.Stop();
+        wakeVoiceSource.clip = wakeVoiceClip;
+        wakeVoiceSource.volume = wakeVoiceVolume;
+        wakeVoiceSource.loop = false;
+        wakeVoiceSource.spatialBlend = 0f;
+        wakeVoiceSource.Play();
     }
 
     private void DisableOtherCameras()
@@ -448,10 +485,8 @@ public class HospitalIntro : MonoBehaviour
 
         rect.anchorMin = Vector2.zero;
         rect.anchorMax = Vector2.one;
-
         rect.offsetMin = Vector2.zero;
         rect.offsetMax = Vector2.zero;
-
         rect.localScale = Vector3.one;
         rect.localRotation = Quaternion.identity;
     }
