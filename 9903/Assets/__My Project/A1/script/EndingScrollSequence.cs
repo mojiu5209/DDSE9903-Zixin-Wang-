@@ -7,10 +7,10 @@ using UnityEngine.UI;
 public class EndingScrollSequence : MonoBehaviour
 {
     [Header("UI")]
-    [Tooltip("拖入 Canvas 里的黑色全屏 Image，例如 BlackFade。")]
+    [Tooltip("拖入专门给结尾使用的 EndingBlackFade。")]
     [SerializeField] private Image blackFade;
 
-    [Tooltip("拖入 Canvas 里的 TextMeshProUGUI 结尾字幕。")]
+    [Tooltip("拖入 Canvas 里的 EndingText。")]
     [SerializeField] private TextMeshProUGUI endingText;
 
     [Header("Ending Text")]
@@ -20,30 +20,25 @@ public class EndingScrollSequence : MonoBehaviour
         "He finally found his way home.\n\n" +
         "And so did I.";
 
-    [Tooltip("字幕开始位置。通常在屏幕下方。")]
     [SerializeField]
     private Vector2 startPosition =
         new Vector2(0f, -500f);
 
-    [Tooltip("字幕结束位置。通常在屏幕上方。")]
     [SerializeField]
     private Vector2 endPosition =
         new Vector2(0f, 500f);
 
     [Header("Audio")]
     [SerializeField] private AudioSource audioSource;
-
     [SerializeField] private AudioClip endingVoice;
 
     [Range(0f, 1f)]
     [SerializeField] private float volume = 1f;
 
     [Header("Timing")]
-    [Tooltip("黑屏达到完全黑色的时间比例。0.7 代表在语音 70% 时完全黑。")]
     [Range(0.1f, 1f)]
     [SerializeField] private float fadeToBlackProgress = 0.7f;
 
-    [Tooltip("语音播放完后，黑屏停留多久。")]
     [SerializeField] private float holdBlackSeconds = 2f;
 
     [Header("Finished Event")]
@@ -59,10 +54,10 @@ public class EndingScrollSequence : MonoBehaviour
         {
             originalBlackColor = blackFade.color;
 
-            Color transparentBlack = originalBlackColor;
-            transparentBlack.a = 0f;
+            Color hiddenBlack = originalBlackColor;
+            hiddenBlack.a = 0f;
 
-            blackFade.color = transparentBlack;
+            blackFade.color = hiddenBlack;
             blackFade.gameObject.SetActive(false);
         }
 
@@ -74,7 +69,6 @@ public class EndingScrollSequence : MonoBehaviour
         }
     }
 
-    // 给 Park Trigger 或 UnityEvent 调用
     public void PlayEndingSequence()
     {
         if (hasStarted)
@@ -92,7 +86,7 @@ public class EndingScrollSequence : MonoBehaviour
         if (endingText == null)
         {
             Debug.LogWarning(
-                "EndingScrollSequence: Ending Text has not been assigned."
+                "EndingScrollSequence: Ending Text 没有设置。"
             );
 
             yield break;
@@ -101,6 +95,10 @@ public class EndingScrollSequence : MonoBehaviour
         if (blackFade != null)
         {
             blackFade.gameObject.SetActive(true);
+
+            Color transparentBlack = originalBlackColor;
+            transparentBlack.a = 0f;
+            blackFade.color = transparentBlack;
         }
 
         endingText.gameObject.SetActive(true);
@@ -154,7 +152,6 @@ public class EndingScrollSequence : MonoBehaviour
 
                 Color blackColor = originalBlackColor;
                 blackColor.a = fadeProgress;
-
                 blackFade.color = blackColor;
             }
 
