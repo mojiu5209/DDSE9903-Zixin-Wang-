@@ -6,11 +6,13 @@ public class ClickPersonSpeak : MonoBehaviour
     [Header("Character")]
     [SerializeField] private Animator characterAnimator;
 
+    [Tooltip("人物正在移动时，锁定这个物体的位置。通常拖人物自己。")]
+    [SerializeField] private Transform characterRoot;
+
     [Header("Voice")]
     [SerializeField] private AudioSource audioSource;
     [SerializeField] private AudioClip voiceClip;
 
-    [Tooltip("点击后等待多久再说话。")]
     [SerializeField] private float voiceDelay = 1f;
 
     [Range(0f, 1f)]
@@ -21,10 +23,34 @@ public class ClickPersonSpeak : MonoBehaviour
 
     private bool hasPlayed;
     private bool isPlaying;
-    private float originalAnimatorSpeed = 1f;
+    private bool freezeCharacter;
+
+    private Vector3 frozenPosition;
+    private Quaternion frozenRotation;
+
+    private void Awake()
+    {
+        if (characterRoot == null)
+        {
+            characterRoot = transform;
+        }
+    }
+
+    private void LateUpdate()
+    {
+        if (!freezeCharacter || characterRoot == null)
+        {
+            return;
+        }
+
+        characterRoot.position = frozenPosition;
+        characterRoot.rotation = frozenRotation;
+    }
 
     public void StopAndSpeak()
     {
+        Debug.Log("ClickPersonSpeak: StopAndSpeak called.");
+
         if (isPlaying)
         {
             return;
@@ -43,16 +69,16 @@ public class ClickPersonSpeak : MonoBehaviour
         isPlaying = true;
         hasPlayed = true;
 
-        Debug.Log("Person clicked: stopping animation.");
+        if (characterRoot != null)
+        {
+            frozenPosition = characterRoot.position;
+            frozenRotation = characterRoot.rotation;
+            freezeCharacter = true;
+        }
 
         if (characterAnimator != null)
         {
-            originalAnimatorSpeed = characterAnimator.speed;
-
-            // 先暂停当前动画
             characterAnimator.speed = 0f;
-
-            // 再关闭 Animator，避免动画继续改 Position / Rotation
             characterAnimator.enabled = false;
         }
 
@@ -70,25 +96,25 @@ public class ClickPersonSpeak : MonoBehaviour
         else
         {
             Debug.LogWarning(
-                "ClickPersonSpeak: Voice Clip 还没有拖进去。"
+                "ClickPersonSpeak: Voice Clip has not been assigned."
             );
         }
 
         isPlaying = false;
     }
 
-    public void ResumeAnimation()
+    public void ResumeCharacter()
     {
-        if (characterAnimator == null)
-        {
-            return;
-        }
+        freezeCharacter = false;
 
-        characterAnimator.enabled = true;
-        characterAnimator.speed = originalAnimatorSpeed;
+        if (characterAnimator != null)
+        {
+            characterAnimator.enabled = true;
+            characterAnimator.speed = 1f;
+        }
     }
 
-    public void ResetPersonSpeak()
+    public void ResetInteraction()
     {
         hasPlayed = false;
         isPlaying = false;
